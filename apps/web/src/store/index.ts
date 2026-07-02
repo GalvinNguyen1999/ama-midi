@@ -1,10 +1,12 @@
 import { configureStore } from '@reduxjs/toolkit';
 
+import songReducer from './songSlice';
 import uiReducer from './uiSlice';
 
 export const store = configureStore({
   reducer: {
     ui: uiReducer,
+    song: songReducer,
   },
 });
 
