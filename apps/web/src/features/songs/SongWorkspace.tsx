@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 
 import { DEFAULT_NOTE_COLOR } from '~/features/pianoRoll/config'
 import { PianoRoll } from '~/features/pianoRoll/PianoRoll'
+import { useSongRealtime } from '~/features/realtime/useSongRealtime'
 import { NoteDialog, type NoteFormValues } from '~/features/songs/NoteDialog'
 import { useAppDispatch, useAppSelector } from '~/store/hooks'
 import {
@@ -34,6 +35,8 @@ export function SongWorkspace() {
   const dispatch = useAppDispatch()
   const songs = useAppSelector((s) => s.song.songs)
   const current = useAppSelector((s) => s.song.current)
+
+  useSongRealtime(current?.id)
 
   const [selectedId, setSelectedId] = useState('')
   const [newTitle, setNewTitle] = useState('')

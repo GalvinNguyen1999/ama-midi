@@ -29,7 +29,7 @@ describe('NoteService', () => {
   afterEach(() => jest.clearAllMocks())
 
   it('create returns a note DTO with defaulted color', async () => {
-    mockedRepo.create.mockResolvedValue(fakeNote as never)
+    mockedRepo.create.mockResolvedValue({ note: fakeNote, version: 1 } as never)
     const dto = await NoteService.create('s1', { title: 'A', track: 1, time: 5 })
     expect(dto).toMatchObject({ id: 'n1', track: 1, time: 5, color: '#7c3aed' })
     expect(mockedRepo.create).toHaveBeenCalledTimes(1)

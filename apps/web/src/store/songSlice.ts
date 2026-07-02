@@ -22,6 +22,23 @@ const initialState: SongState = {
   loading: false,
 }
 
+function upsertNote(state: SongState, note: Note) {
+  if (!state.current || state.current.id !== note.songId) return
+
+  const idx = state.current.notes.findIndex((n) => n.id === note.id)
+
+  if (idx >= 0) {
+     state.current.notes[idx] = note
+  } else {
+    state.current.notes.push(note)
+  }
+}
+
+function removeNoteFromState(state: SongState, songId: string, noteId: string) {
+  if (!state.current || state.current.id !== songId) return
+  state.current.notes = state.current.notes.filter((n) => n.id !== noteId)
+}
+
 export const fetchSongs = createAsyncThunk('song/fetchSongs', () => listSongs())
 
 export const openSong = createAsyncThunk('song/openSong', (id: string) => getSong(id))
@@ -48,7 +65,14 @@ export const removeNote = createAsyncThunk('song/removeNote', async (id: string)
 const songSlice = createSlice({
   name: 'song',
   initialState,
-  reducers: {},
+  reducers: {
+    applyNoteUpsert(state, action: PayloadAction<Note>) {
+      upsertNote(state, action.payload)
+    },
+    applyNoteRemove(state, action: PayloadAction<{ songId: string; noteId: string }>) {
+      removeNoteFromState(state, action.payload.songId, action.payload.noteId)
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchSongs.fulfilled, (state, action: PayloadAction<Song[]>) => {
@@ -68,20 +92,16 @@ const songSlice = createSlice({
         state.loading = false
       })
       .addCase(addNote.fulfilled, (state, action: PayloadAction<Note>) => {
-        if (state.current && state.current.id === action.payload.songId) {
-          state.current.notes.push(action.payload)
-        }
+        upsertNote(state, action.payload)
       })
       .addCase(editNote.fulfilled, (state, action: PayloadAction<Note>) => {
-        if (!state.current) return
-        const idx = state.current.notes.findIndex((n) => n.id === action.payload.id)
-        if (idx >= 0) state.current.notes[idx] = action.payload
+        upsertNote(state, action.payload)
       })
       .addCase(removeNote.fulfilled, (state, action: PayloadAction<string>) => {
-        if (!state.current) return
-        state.current.notes = state.current.notes.filter((n) => n.id !== action.payload)
+        if (state.current) removeNoteFromState(state, state.current.id, action.payload)
       })
   },
 })
 
+export const { applyNoteUpsert, applyNoteRemove } = songSlice.actions
 export default songSlice.reducer
