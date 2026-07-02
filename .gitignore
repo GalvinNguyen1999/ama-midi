@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+coverage/
+
+# Env
+.env
+.env.*.local
+!.env.example
+
+# Prisma
+apps/api/prisma/*.db
+apps/api/prisma/migrations/dev.db*
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+
+# Caches
+.eslintcache
+.turbo
+.cache
+.vite
+PLAN.md

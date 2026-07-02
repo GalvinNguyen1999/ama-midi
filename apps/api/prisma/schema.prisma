@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Song {
+  id        String      @id @default(uuid()) @db.Uuid
+  title     String
+  bpm       Int         @default(120)
+  version   Int         @default(0)
+  notes     Note[]
+  events    NoteEvent[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@map("songs")
+}
+
+model Note {
+  id          String   @id @default(uuid()) @db.Uuid
+  song        Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  songId      String   @db.Uuid
+  title       String
+  description String?
+  track       Int      @db.SmallInt
+  time        Decimal  @db.Decimal(6, 3)
+  color       String   @default("#7c3aed")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([songId, track, time], name: "uq_note_position")
+  @@index([songId])
+  @@map("notes")
+}
+
+enum NoteEventType {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+model NoteEvent {
+  id        BigInt        @id @default(autoincrement())
+  song      Song          @relation(fields: [songId], references: [id], onDelete: Cascade)
+  songId    String        @db.Uuid
+  noteId    String?       @db.Uuid
+  type      NoteEventType
+  payload   Json
+  actor     String?
+  createdAt DateTime      @default(now())
+
+  @@index([songId, id])
+  @@map("note_events")
+}

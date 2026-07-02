@@ -1,0 +1,44 @@
+# AMA-MIDI — local dev infrastructure.
+#
+# Ngay bây giờ: chạy `docker compose up -d postgres` để có DB cho `apps/api`.
+# Khối api/web sẽ bật ở bước DevOps (Ngày 3) sau khi thêm Dockerfile cho mỗi app.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ama-midi-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ama
+      POSTGRES_PASSWORD: ama
+      POSTGRES_DB: ama_midi
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ama -d ama_midi']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: ama-midi-redis
+  #   ports:
+  #     - '6379:6379'
+
+  # api:
+  #   build: { context: ., dockerfile: apps/api/Dockerfile }
+  #   env_file: apps/api/.env
+  #   depends_on:
+  #     postgres: { condition: service_healthy }
+  #   ports: ['3000:3000']
+
+  # web:
+  #   build: { context: ., dockerfile: apps/web/Dockerfile }
+  #   depends_on: [api]
+  #   ports: ['5173:80']
+
+volumes:
+  pgdata:
