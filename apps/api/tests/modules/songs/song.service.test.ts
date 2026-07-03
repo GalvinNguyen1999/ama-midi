@@ -31,4 +31,25 @@ describe('SongService', () => {
     await SongService.remove('s1', 'owner-1')
     expect(mockedRepo.remove).toHaveBeenCalledWith('s1')
   })
+
+  it('getNotes maps repo rows to note DTOs within the requested range', async () => {
+    mockedRepo.listNotes.mockResolvedValue([
+      {
+        id: 'n1',
+        songId: 's1',
+        title: 'A',
+        description: null,
+        track: 1,
+        time: { toNumber: () => 12 },
+        color: '#7c3aed',
+        createdAt: new Date('2020-01-01T00:00:00Z'),
+        updatedAt: new Date('2020-01-01T00:00:00Z'),
+      },
+    ] as never)
+
+    const notes = await SongService.getNotes('s1', 0, 30)
+
+    expect(mockedRepo.listNotes).toHaveBeenCalledWith('s1', 0, 30)
+    expect(notes[0]).toMatchObject({ id: 'n1', track: 1, time: 12 })
+  })
 })

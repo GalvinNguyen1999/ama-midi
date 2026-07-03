@@ -4,8 +4,7 @@ import { toast } from 'react-toastify'
 import { useAppDispatch } from '~/store/hooks'
 import { applyNoteRemove, applyNoteUpsert } from '~/store/songSlice'
 import type { Note, PresenceUser } from '~/types/midi'
-
-const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:3000'
+import { WS_URL } from '~/utils/env'
 
 type ServerEvent =
   | { type: 'note.created'; songId: string; note: Note; actor?: string }

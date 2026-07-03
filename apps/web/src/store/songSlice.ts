@@ -5,21 +5,26 @@ import {
   createSongApi,
   deleteNoteApi,
   deleteSongApi,
+  getNotesWindow,
   getSong,
   listSongs,
   updateNoteApi,
 } from '~/apis/midi'
-import type { Note, NoteInput, NoteUpdate, Song, SongWithNotes } from '~/types/midi'
+import type { Note, NoteInput, NoteUpdate, Song, SongDetail, SongWithNotes } from '~/types/midi'
+
+export const CHUNK_SECONDS = 30
 
 interface SongState {
   songs: Song[]
   current: SongWithNotes | null
+  loadedChunks: number[]
   loading: boolean
 }
 
 const initialState: SongState = {
   songs: [],
   current: null,
+  loadedChunks: [],
   loading: false,
 }
 
@@ -29,7 +34,7 @@ function upsertNote(state: SongState, note: Note) {
   const idx = state.current.notes.findIndex((n) => n.id === note.id)
 
   if (idx >= 0) {
-     state.current.notes[idx] = note
+    state.current.notes[idx] = note
   } else {
     state.current.notes.push(note)
   }
@@ -43,6 +48,15 @@ function removeNoteFromState(state: SongState, songId: string, noteId: string) {
 export const fetchSongs = createAsyncThunk('song/fetchSongs', () => listSongs())
 
 export const openSong = createAsyncThunk('song/openSong', (id: string) => getSong(id))
+
+export const loadNotes = createAsyncThunk(
+  'song/loadNotes',
+  async (args: { songId: string; chunk: number }) => {
+    const from = args.chunk * CHUNK_SECONDS
+    const notes = await getNotesWindow(args.songId, from, from + CHUNK_SECONDS)
+    return { songId: args.songId, chunk: args.chunk, notes }
+  },
+)
 
 export const createSong = createAsyncThunk('song/createSong', (title: string) =>
   createSongApi({ title }),
@@ -90,12 +104,20 @@ const songSlice = createSlice({
       .addCase(openSong.pending, (state) => {
         state.loading = true
       })
-      .addCase(openSong.fulfilled, (state, action: PayloadAction<SongWithNotes>) => {
+      .addCase(openSong.fulfilled, (state, action: PayloadAction<SongDetail>) => {
         state.loading = false
-        state.current = action.payload
+        state.current = { ...action.payload, notes: [] }
+        state.loadedChunks = []
       })
       .addCase(openSong.rejected, (state) => {
         state.loading = false
+      })
+      .addCase(loadNotes.fulfilled, (state, action) => {
+        const { songId, chunk, notes } = action.payload
+        if (!state.current || state.current.id !== songId) return
+        const existing = new Set(state.current.notes.map((n) => n.id))
+        for (const n of notes) if (!existing.has(n.id)) state.current.notes.push(n)
+        if (!state.loadedChunks.includes(chunk)) state.loadedChunks.push(chunk)
       })
       .addCase(addNote.fulfilled, (state, action: PayloadAction<Note>) => {
         upsertNote(state, action.payload)

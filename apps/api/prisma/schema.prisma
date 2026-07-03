@@ -66,6 +66,7 @@ model Note {
 
   @@unique([songId, track, time], name: "uq_note_position")
   @@index([songId])
+  @@index([songId, time])
   @@map("notes")
 }
 

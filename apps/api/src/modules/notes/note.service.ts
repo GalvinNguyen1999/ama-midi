@@ -18,6 +18,15 @@ function translate(e: unknown): unknown {
 }
 
 export const NoteService = {
+  async seed(songId: string, count: number) {
+    try {
+      const inserted = await NoteRepo.bulkSeed(songId, count)
+      return { inserted }
+    } catch (e) {
+      throw translate(e)
+    }
+  },
+
   async create(songId: string, input: NoteInput, actor?: string) {
     try {
       const { note, version } = await NoteRepo.create(

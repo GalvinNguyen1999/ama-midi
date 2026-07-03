@@ -16,12 +16,23 @@ export const SongRepo = {
       where: { id },
       include: {
         ...ownerSelect,
-        notes: { orderBy: [{ track: 'asc' }, { time: 'asc' }] },
+        _count: { select: { notes: true } },
         collaborators: {
           include: { user: { select: { email: true } } },
           orderBy: { lastSeen: 'desc' },
         },
       },
+    })
+  },
+
+  listNotes(songId: string, from?: number, to?: number) {
+    const time =
+      from != null || to != null
+        ? { gte: from ?? undefined, lte: to ?? undefined }
+        : undefined
+    return prisma.note.findMany({
+      where: { songId, ...(time ? { time } : {}) },
+      orderBy: [{ track: 'asc' }, { time: 'asc' }],
     })
   },
 

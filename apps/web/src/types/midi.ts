@@ -31,9 +31,13 @@ export interface Collaborator {
   lastSeen: string
 }
 
-export interface SongWithNotes extends Song {
-  notes: Note[]
+export interface SongDetail extends Song {
+  noteCount: number
   collaborators: Collaborator[]
+}
+
+export interface SongWithNotes extends SongDetail {
+  notes: Note[]
 }
 
 export interface NoteInput {

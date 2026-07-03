@@ -108,11 +108,16 @@ export function LibraryPage() {
   }, [songs, user])
 
   const handleCreate = async () => {
+    const title = newTitle.trim()
+    if (!title) {
+      toast.error('Song title is required')
+      return
+    }
     setCreating(true)
-    const title = newTitle.trim() || `Song ${songs.length + 1}`
     const res = await dispatch(createSong(title))
     setCreating(false)
     if (createSong.fulfilled.match(res)) {
+      toast.success(`Song “${title}” created`)
       setNewTitle('')
       setNewOpen(false)
       navigate(`/songs/${res.payload.id}`)
@@ -122,8 +127,9 @@ export function LibraryPage() {
   const handleDelete = async () => {
     if (!deleteTarget) return
     setDeleting(true)
-    await dispatch(removeSong(deleteTarget.id))
+    const res = await dispatch(removeSong(deleteTarget.id))
     setDeleting(false)
+    if (removeSong.fulfilled.match(res)) toast.success('Song deleted')
     setDeleteTarget(null)
   }
 
@@ -302,10 +308,13 @@ export function LibraryPage() {
           <TextField
             autoFocus
             fullWidth
+            required
             label="Song title"
             placeholder={`Song ${songs.length + 1}`}
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
+            error={!newTitle.trim()}
+            helperText={!newTitle.trim() ? 'Song title is required' : ' '}
             sx={{ mt: 1 }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleCreate()
@@ -314,7 +323,7 @@ export function LibraryPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setNewOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleCreate} disabled={creating}>
+          <Button variant="contained" onClick={handleCreate} disabled={creating || !newTitle.trim()}>
             {creating ? 'Creating…' : 'Create'}
           </Button>
         </DialogActions>

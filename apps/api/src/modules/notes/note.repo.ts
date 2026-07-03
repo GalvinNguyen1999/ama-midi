@@ -20,7 +20,40 @@ function notePayload(note: Note): Prisma.InputJsonValue {
   }
 }
 
+const SEED_COLORS = ['#7c3aed', '#ef4444', '#22c55e', '#3b82f6', '#eab308', '#ec4899', '#06b6d4']
+
 export const NoteRepo = {
+  async bulkSeed(songId: string, count: number): Promise<number> {
+    const rows: Prisma.NoteCreateManyInput[] = []
+    const seen = new Set<string>()
+    let guard = 0
+
+    while (rows.length < count && guard < count * 4) {
+      guard++
+      const track = 1 + Math.floor(Math.random() * 8)
+      const time = Math.round(Math.random() * 300000) / 1000
+      const key = `${track}:${time}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      rows.push({
+        songId,
+        title: `Seed ${rows.length + 1}`,
+        track,
+        time,
+        color: SEED_COLORS[rows.length % SEED_COLORS.length],
+      })
+    }
+
+    let inserted = 0
+    for (let i = 0; i < rows.length; i += 5000) {
+      const batch = await prisma.note.createMany({ data: rows.slice(i, i + 5000), skipDuplicates: true })
+      inserted += batch.count
+    }
+
+    await prisma.song.update({ where: { id: songId }, data: { version: { increment: 1 } } })
+    return inserted
+  },
+
   create(
     songId: string,
     data: Required<Pick<NoteInput, 'title' | 'track' | 'time' | 'color'>> &

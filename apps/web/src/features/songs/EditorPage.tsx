@@ -2,6 +2,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import CircleIcon from '@mui/icons-material/Circle'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import LinkIcon from '@mui/icons-material/Link'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import StopIcon from '@mui/icons-material/Stop'
 import {
@@ -17,6 +18,8 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  Menu,
+  MenuItem,
   Stack,
   Tooltip,
   Typography,
@@ -25,11 +28,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
+import { seedNotesApi } from '~/apis/midi'
 import { DEFAULT_NOTE_COLOR } from '~/features/pianoRoll/config'
 import { PianoRoll } from '~/features/pianoRoll/PianoRoll'
-import { usePlayback } from '~/features/playback/usePlayback'
-import { useSongRealtime } from '~/features/realtime/useSongRealtime'
 import { NoteDialog, type NoteFormValues } from '~/features/songs/NoteDialog'
+import { usePlayback } from '~/features/songs/usePlayback'
+import { useSongRealtime } from '~/features/songs/useSongRealtime'
+import { useWindowedNotes } from '~/features/songs/useWindowedNotes'
 import { useAppDispatch, useAppSelector } from '~/store/hooks'
 import { addNote, applyNoteUpsert, editNote, openSong, removeNote, removeSong } from '~/store/songSlice'
 import type { Note } from '~/types/midi'
@@ -65,6 +70,9 @@ export function EditorPage() {
 
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [perfAnchor, setPerfAnchor] = useState<null | HTMLElement>(null)
+  const [seeding, setSeeding] = useState(false)
+  const { scrollRef, onScroll, reload } = useWindowedNotes(id, current?.id)
   const [dialog, setDialog] = useState<DialogState>({
     open: false,
     mode: 'create',
@@ -96,7 +104,25 @@ export function EditorPage() {
     setDeleting(true)
     const res = await dispatch(removeSong(current.id))
     setDeleting(false)
-    if (removeSong.fulfilled.match(res)) navigate('/songs')
+    if (removeSong.fulfilled.match(res)) {
+      toast.success('Song deleted')
+      navigate('/songs')
+    }
+  }
+
+  const handleSeed = async (count: number) => {
+    if (!current) return
+    setPerfAnchor(null)
+    setSeeding(true)
+    const t0 = performance.now()
+    try {
+      const { inserted } = await seedNotesApi(current.id, count)
+      await dispatch(openSong(current.id))
+      reload()
+      toast.success(`Seeded ${inserted.toLocaleString()} notes in ${Math.round(performance.now() - t0)}ms`)
+    } finally {
+      setSeeding(false)
+    }
   }
 
   const handleMoveNote = async (note: Note, track: number, time: number) => {
@@ -124,7 +150,7 @@ export function EditorPage() {
 
   const closeDialog = () => setDialog((d) => ({ ...d, open: false }))
 
-  const submitDialog = (values: NoteFormValues) => {
+  const submitDialog = async (values: NoteFormValues) => {
     if (!current) return
     const input = {
       title: values.title,
@@ -133,14 +159,23 @@ export function EditorPage() {
       time: values.time,
       color: values.color,
     }
-    if (dialog.mode === 'create') dispatch(addNote({ songId: current.id, input }))
-    else if (dialog.note) dispatch(editNote({ id: dialog.note.id, input }))
     closeDialog()
+    if (dialog.mode === 'create') {
+      const res = await dispatch(addNote({ songId: current.id, input }))
+      if (addNote.fulfilled.match(res)) toast.success('Note added')
+    } else if (dialog.note) {
+      const res = await dispatch(editNote({ id: dialog.note.id, input }))
+      if (editNote.fulfilled.match(res)) toast.success('Note updated')
+    }
   }
 
-  const handleDeleteNote = () => {
-    if (dialog.note) dispatch(removeNote(dialog.note.id))
+  const handleDeleteNote = async () => {
+    const note = dialog.note
     closeDialog()
+    if (note) {
+      const res = await dispatch(removeNote(note.id))
+      if (removeNote.fulfilled.match(res)) toast.success('Note deleted')
+    }
   }
 
   return (
@@ -166,7 +201,11 @@ export function EditorPage() {
               {current?.title ?? 'Loading…'}
             </Typography>
             {current ? (
-              <Chip size="small" variant="outlined" label={`v${current.version} · ${current.notes.length} notes`} />
+              <Chip
+                size="small"
+                variant="outlined"
+                label={`v${current.version} · ${current.notes.length.toLocaleString()}/${current.noteCount.toLocaleString()} loaded`}
+              />
             ) : null}
             {current?.ownerEmail ? (
               <Chip
@@ -224,6 +263,24 @@ export function EditorPage() {
                 </IconButton>
               </Tooltip>
             ) : null}
+            {current ? (
+              <Tooltip title="Developer tools">
+                <span>
+                  <IconButton size="small" onClick={(e) => setPerfAnchor(e.currentTarget)} disabled={seeding}>
+                    {seeding ? <CircularProgress size={18} /> : <MoreVertIcon />}
+                  </IconButton>
+                </span>
+              </Tooltip>
+            ) : null}
+            <Menu anchorEl={perfAnchor} open={Boolean(perfAnchor)} onClose={() => setPerfAnchor(null)}>
+              <MenuItem disabled sx={{ opacity: '1 !important' }}>
+                <Typography variant="caption" color="text.secondary">
+                  Developer · seed stress notes
+                </Typography>
+              </MenuItem>
+              <MenuItem onClick={() => handleSeed(1000)}>+ 1,000 notes</MenuItem>
+              <MenuItem onClick={() => handleSeed(10000)}>+ 10,000 notes</MenuItem>
+            </Menu>
           </Stack>
         </Container>
       </Box>
@@ -239,7 +296,7 @@ export function EditorPage() {
             <CircularProgress />
           </Box>
         ) : current ? (
-          <Box sx={{ maxHeight: '72vh', overflow: 'auto' }}>
+          <Box ref={scrollRef} onScroll={onScroll} sx={{ maxHeight: '72vh', overflow: 'auto' }}>
             <PianoRoll
               notes={current.notes}
               onCreateAt={openCreate}

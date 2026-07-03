@@ -1,6 +1,4 @@
-import type { Note, NoteEvent, Song } from '@prisma/client'
-
-import { NoteDTO, toNoteDTO } from '~/modules/notes/note.types'
+import type { NoteEvent, Song } from '@prisma/client'
 
 export interface SongDTO {
   id: string
@@ -19,7 +17,7 @@ export interface CollaboratorDTO {
 }
 
 export interface SongWithNotesDTO extends SongDTO {
-  notes: NoteDTO[]
+  noteCount: number
   collaborators: CollaboratorDTO[]
 }
 
@@ -30,7 +28,10 @@ interface CollaboratorRow {
   lastSeen: Date
 }
 
-type SongDetail = SongWithOwner & { notes: Note[]; collaborators: CollaboratorRow[] }
+type SongDetail = SongWithOwner & {
+  _count: { notes: number }
+  collaborators: CollaboratorRow[]
+}
 
 export interface NoteEventDTO {
   id: string
@@ -58,7 +59,7 @@ export function toSongDTO(s: SongWithOwner): SongDTO {
 export function toSongWithNotesDTO(s: SongDetail): SongWithNotesDTO {
   return {
     ...toSongDTO(s),
-    notes: s.notes.map(toNoteDTO),
+    noteCount: s._count.notes,
     collaborators: s.collaborators.map((c) => ({
       email: c.user.email,
       lastSeen: c.lastSeen.toISOString(),

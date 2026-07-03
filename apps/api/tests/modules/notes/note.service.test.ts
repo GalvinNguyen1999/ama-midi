@@ -53,4 +53,11 @@ describe('NoteService', () => {
     mockedRepo.update.mockRejectedValue(prismaError('P2025'))
     await expect(NoteService.update('n1', { title: 'B' })).rejects.toMatchObject({ statusCode: 404 })
   })
+
+  it('seed returns the number of inserted notes', async () => {
+    mockedRepo.bulkSeed.mockResolvedValue(42 as never)
+    const res = await NoteService.seed('s1', 42)
+    expect(res).toEqual({ inserted: 42 })
+    expect(mockedRepo.bulkSeed).toHaveBeenCalledWith('s1', 42)
+  })
 })

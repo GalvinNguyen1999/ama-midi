@@ -13,6 +13,13 @@ export const NoteController = {
     res.status(StatusCodes.CREATED).json(note)
   }),
 
+  seed: asyncHandler(async (req: Request, res: Response) => {
+    const raw = Number((req.body as { count?: unknown })?.count) || 0
+    const count = Math.min(Math.max(Math.trunc(raw), 1), 100000)
+    const result = await NoteService.seed(stringParam(req, 'songId'), count)
+    res.status(StatusCodes.CREATED).json(result)
+  }),
+
   update: asyncHandler(async (req: Request, res: Response) => {
     const note = await NoteService.update(stringParam(req, 'id'), req.body, req.user?.email)
     res.json(note)

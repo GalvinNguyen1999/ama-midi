@@ -1,4 +1,4 @@
-import type { Note, NoteInput, NoteUpdate, Song, SongWithNotes } from '~/types/midi'
+import type { Note, NoteInput, NoteUpdate, Song, SongDetail } from '~/types/midi'
 import authorizedAxiosInstance from '~/utils/authorizedAxios'
 
 export const listSongs = async (): Promise<Song[]> => {
@@ -11,8 +11,15 @@ export const createSongApi = async (input: { title: string; bpm?: number }): Pro
   return data
 }
 
-export const getSong = async (id: string): Promise<SongWithNotes> => {
-  const { data } = await authorizedAxiosInstance.get<SongWithNotes>(`/songs/${id}`)
+export const getSong = async (id: string): Promise<SongDetail> => {
+  const { data } = await authorizedAxiosInstance.get<SongDetail>(`/songs/${id}`)
+  return data
+}
+
+export const getNotesWindow = async (songId: string, from: number, to: number): Promise<Note[]> => {
+  const { data } = await authorizedAxiosInstance.get<Note[]>(`/songs/${songId}/notes`, {
+    params: { from, to },
+  })
   return data
 }
 
@@ -32,4 +39,12 @@ export const updateNoteApi = async (id: string, input: NoteUpdate): Promise<Note
 
 export const deleteNoteApi = async (id: string): Promise<void> => {
   await authorizedAxiosInstance.delete(`/notes/${id}`)
+}
+
+export const seedNotesApi = async (songId: string, count: number): Promise<{ inserted: number }> => {
+  const { data } = await authorizedAxiosInstance.post<{ inserted: number }>(
+    `/songs/${songId}/notes/seed`,
+    { count },
+  )
+  return data
 }

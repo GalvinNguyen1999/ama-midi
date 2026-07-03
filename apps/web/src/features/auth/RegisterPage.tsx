@@ -3,6 +3,7 @@ import { Button, Link as MuiLink, Stack, TextField, Typography } from '@mui/mate
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
+import { toast } from 'react-toastify'
 
 import { registerApi, storeSession } from '~/apis/auth'
 import { AuthLayout } from '~/features/auth/AuthLayout'
@@ -22,6 +23,7 @@ export function RegisterPage() {
     try {
       const res = await registerApi(data.email, data.password)
       storeSession(res)
+      toast.success('Account created')
       navigate('/')
     } finally {
       setBusy(false)

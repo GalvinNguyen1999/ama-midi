@@ -4,6 +4,7 @@ import { SongRepo } from './song.repo'
 import { toNoteEventDTO, toSongDTO, toSongWithNotesDTO } from './song.types'
 
 import { ApiError } from '~/core/http/ApiError'
+import { toNoteDTO } from '~/modules/notes/note.types'
 
 export const SongService = {
   async create(input: { title: string; bpm?: number }, ownerId?: string) {
@@ -27,6 +28,11 @@ export const SongService = {
     const song = await SongRepo.findById(id)
     if (!song) throw ApiError.NotFound('Song not found')
     return toSongWithNotesDTO(song)
+  },
+
+  async getNotes(id: string, from?: number, to?: number) {
+    const notes = await SongRepo.listNotes(id, from, to)
+    return notes.map(toNoteDTO)
   },
 
   async getEvents(id: string) {

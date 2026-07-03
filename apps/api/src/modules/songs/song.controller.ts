@@ -21,6 +21,18 @@ export const SongController = {
     res.json(await SongService.getById(stringParam(req, 'id'), req.user?.id))
   }),
 
+  getNotes: asyncHandler(async (req: Request, res: Response) => {
+    const from = Number(req.query.from)
+    const to = Number(req.query.to)
+    res.json(
+      await SongService.getNotes(
+        stringParam(req, 'songId'),
+        Number.isFinite(from) ? from : undefined,
+        Number.isFinite(to) ? to : undefined,
+      ),
+    )
+  }),
+
   getEvents: asyncHandler(async (req: Request, res: Response) => {
     res.json(await SongService.getEvents(stringParam(req, 'id')))
   }),

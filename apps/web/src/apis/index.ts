@@ -1,11 +1,11 @@
-import axios from 'axios'
+import authorizedAxiosInstance from '~/utils/authorizedAxios'
 
 const API_ROOT = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api'
 
 export const handleLogoutApi = () => {
-  return axios.delete(`${API_ROOT}/auth/logout`, { withCredentials: true })
+  return authorizedAxiosInstance.delete(`${API_ROOT}/auth/logout`, { withCredentials: true })
 }
 
 export const handleRefreshTokenApi = (refreshToken: string | null) => {
-  return axios.put(`${API_ROOT}/auth/refresh_token`, { refreshToken }, { withCredentials: true })
+  return authorizedAxiosInstance.put(`${API_ROOT}/auth/refresh_token`, { refreshToken }, { withCredentials: true })
 }

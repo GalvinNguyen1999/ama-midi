@@ -3,6 +3,7 @@ import { Button, Link as MuiLink, Stack, TextField, Typography } from '@mui/mate
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
+import { toast } from 'react-toastify'
 
 import { loginApi, storeSession, verify2faApi } from '~/apis/auth'
 import { AuthLayout } from '~/features/auth/AuthLayout'
@@ -32,6 +33,7 @@ export function LoginPage() {
         return
       }
       storeSession(res)
+      toast.success('Signed in')
       navigate('/')
     } finally {
       setBusy(false)
@@ -44,6 +46,7 @@ export function LoginPage() {
     try {
       const res = await verify2faApi(pending2FA, code)
       storeSession(res)
+      toast.success('Signed in')
       navigate('/')
     } finally {
       setBusy(false)
