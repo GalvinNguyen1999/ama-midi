@@ -6,8 +6,8 @@ import { toNoteEventDTO, toSongDTO, toSongWithNotesDTO } from './song.types'
 import { ApiError } from '~/core/http/ApiError'
 
 export const SongService = {
-  async create(input: { title: string; bpm?: number }) {
-    const song = await SongRepo.create(input)
+  async create(input: { title: string; bpm?: number }, ownerId?: string) {
+    const song = await SongRepo.create({ ...input, ownerId })
     return toSongDTO(song)
   },
 
@@ -16,7 +16,14 @@ export const SongService = {
     return songs.map(toSongDTO)
   },
 
-  async getById(id: string) {
+  async getById(id: string, userId?: string) {
+    if (userId) {
+      try {
+        await SongRepo.recordCollaborator(id, userId)
+      } catch (e) {
+        if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2003')) throw e
+      }
+    }
     const song = await SongRepo.findById(id)
     if (!song) throw ApiError.NotFound('Song not found')
     return toSongWithNotesDTO(song)
@@ -29,7 +36,12 @@ export const SongService = {
     return events.map(toNoteEventDTO)
   },
 
-  async remove(id: string) {
+  async remove(id: string, userId?: string) {
+    const song = await SongRepo.findById(id)
+    if (!song) throw ApiError.NotFound('Song not found')
+    if (song.ownerId && song.ownerId !== userId) {
+      throw ApiError.Forbidden('Only the owner can delete this song')
+    }
     try {
       await SongRepo.remove(id)
     } catch (e) {

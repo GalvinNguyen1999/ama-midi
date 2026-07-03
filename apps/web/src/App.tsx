@@ -3,8 +3,10 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { LoginPage } from '~/features/auth/LoginPage'
 import { ProtectedRoute } from '~/features/auth/ProtectedRoute'
 import { RegisterPage } from '~/features/auth/RegisterPage'
-import { TwoFactorSetupPage } from '~/features/auth/TwoFactorSetupPage'
-import { SongWorkspace } from '~/features/songs/SongWorkspace'
+import { AppShell } from '~/features/layout/AppShell'
+import { LibraryPage } from '~/features/library/LibraryPage'
+import { SettingsPage } from '~/features/settings/SettingsPage'
+import { EditorPage } from '~/features/songs/EditorPage'
 
 function App() {
   return (
@@ -12,22 +14,17 @@ function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route
-        path="/2fa-setup"
         element={
           <ProtectedRoute>
-            <TwoFactorSetupPage />
+            <AppShell />
           </ProtectedRoute>
         }
-      />
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <SongWorkspace />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      >
+        <Route path="/songs" element={<LibraryPage />} />
+        <Route path="/songs/:id" element={<EditorPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/songs" replace />} />
     </Routes>
   )
 }

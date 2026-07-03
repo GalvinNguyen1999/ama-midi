@@ -15,12 +15,25 @@ export interface Song {
   title: string
   bpm: number
   version: number
+  ownerId: string | null
+  ownerEmail: string | null
   createdAt: string
   updatedAt: string
 }
 
+export interface PresenceUser {
+  id: string
+  email: string
+}
+
+export interface Collaborator {
+  email: string
+  lastSeen: string
+}
+
 export interface SongWithNotes extends Song {
   notes: Note[]
+  collaborators: Collaborator[]
 }
 
 export interface NoteInput {

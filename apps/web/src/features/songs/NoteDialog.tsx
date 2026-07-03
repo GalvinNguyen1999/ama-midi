@@ -10,18 +10,14 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 
 import { TIME_MAX, TIME_MIN, TRACK_MAX, TRACK_MIN } from '~/features/pianoRoll/config'
+import { noteSchema, type NoteFormValues } from '~/features/songs/noteSchema'
 
-export interface NoteFormValues {
-  title: string
-  description: string
-  track: number
-  time: number
-  color: string
-}
+export type { NoteFormValues }
 
 interface Props {
   open: boolean
@@ -44,7 +40,7 @@ export function NoteDialog({ open, mode, initial, onClose, onSubmit, onDelete }:
     watch,
     setValue,
     formState: { errors },
-  } = useForm<NoteFormValues>({ defaultValues: initial })
+  } = useForm<NoteFormValues>({ resolver: zodResolver(noteSchema), defaultValues: initial })
   const [confirmDelete, setConfirmDelete] = useState(false)
   const color = watch('color')
 
@@ -67,7 +63,7 @@ export function NoteDialog({ open, mode, initial, onClose, onSubmit, onDelete }:
               autoFocus
               error={Boolean(errors.title)}
               helperText={errors.title?.message}
-              {...register('title', { required: 'Title is required' })}
+              {...register('title')}
             />
             <TextField label="Description" fullWidth multiline minRows={2} {...register('description')} />
             <Stack direction="row" spacing={2}>
@@ -89,8 +85,9 @@ export function NoteDialog({ open, mode, initial, onClose, onSubmit, onDelete }:
                 type="number"
                 fullWidth
                 error={Boolean(errors.time)}
+                helperText={errors.time?.message}
                 slotProps={{ htmlInput: { min: TIME_MIN, max: TIME_MAX, step: 0.5 } }}
-                {...register('time', { valueAsNumber: true, min: TIME_MIN, max: TIME_MAX })}
+                {...register('time', { valueAsNumber: true })}
               />
             </Stack>
             <Box>

@@ -24,4 +24,8 @@ export class ApiError extends Error {
   static Conflict(msg = 'Conflict', details?: unknown) {
     return new ApiError(StatusCodes.CONFLICT, msg, details)
   }
+
+  static Forbidden(msg = 'Forbidden', details?: unknown) {
+    return new ApiError(StatusCodes.FORBIDDEN, msg, details)
+  }
 }

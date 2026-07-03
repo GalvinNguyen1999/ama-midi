@@ -1,3 +1,4 @@
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Button, Link as MuiLink, Stack, TextField, Typography } from '@mui/material'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -5,11 +6,7 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import { loginApi, storeSession, verify2faApi } from '~/apis/auth'
 import { AuthLayout } from '~/features/auth/AuthLayout'
-
-interface LoginForm {
-  email: string
-  password: string
-}
+import { loginSchema, type LoginValues } from '~/features/auth/schemas'
 
 const OTP_INPUT_SX = {
   input: { letterSpacing: '0.5em', textAlign: 'center', fontFamily: 'monospace', fontSize: 22 },
@@ -21,12 +18,12 @@ export function LoginPage() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginForm>()
+  } = useForm<LoginValues>({ resolver: zodResolver(loginSchema) })
   const [pending2FA, setPending2FA] = useState<string | null>(null)
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const onSubmit = async (data: LoginForm) => {
+  const onSubmit = async (data: LoginValues) => {
     setBusy(true)
     try {
       const res = await loginApi(data.email, data.password)
@@ -86,7 +83,7 @@ export function LoginPage() {
             fullWidth
             error={Boolean(errors.email)}
             helperText={errors.email?.message}
-            {...register('email', { required: 'Email is required' })}
+            {...register('email')}
           />
           <TextField
             label="Password"
@@ -94,7 +91,7 @@ export function LoginPage() {
             fullWidth
             error={Boolean(errors.password)}
             helperText={errors.password?.message}
-            {...register('password', { required: 'Password is required' })}
+            {...register('password')}
           />
           <Button type="submit" variant="contained" size="large" disabled={busy}>
             {busy ? 'Signing in…' : 'Login'}

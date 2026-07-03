@@ -1,38 +1,61 @@
 import { WebSocket } from 'ws'
 
-import type { WsServerEvent } from './events'
+import type { PresenceUser, WsServerEvent } from './events'
 
-const rooms = new Map<string, Set<WebSocket>>()
+const rooms = new Map<string, Map<WebSocket, PresenceUser>>()
+
+function presenceUsers(songId: string): PresenceUser[] {
+  const members = rooms.get(songId)
+
+  if (!members) return []
+
+  const unique = new Map<string, PresenceUser>()
+  for (const user of members.values()) unique.set(user.id, user)
+
+  return [...unique.values()]
+}
+
+function send(ws: WebSocket, payload: string) {
+  if (ws.readyState === WebSocket.OPEN) ws.send(payload)
+}
 
 export const hub = {
-  join(ws: WebSocket, songId: string) {
-    let set = rooms.get(songId)
+  broadcast(songId: string, event: WsServerEvent) {
+    const members = rooms.get(songId)
 
-    if (!set) {
-      set = new Set()
-      rooms.set(songId, set)
+    if (!members) return
+
+    const payload = JSON.stringify(event)
+    for (const ws of members.keys()) send(ws, payload)
+  },
+
+  broadcastPresence(songId: string) {
+    this.broadcast(songId, { type: 'presence', songId, users: presenceUsers(songId) })
+  },
+
+  join(ws: WebSocket, songId: string, user: PresenceUser) {
+    let members = rooms.get(songId)
+
+    if (!members) {
+      members = new Map()
+      rooms.set(songId, members)
     }
 
-    set.add(ws)
+    members.set(ws, user)
+    this.broadcastPresence(songId)
   },
 
   leave(ws: WebSocket, songId: string) {
-    rooms.get(songId)?.delete(ws)
+    const members = rooms.get(songId)
+
+    if (!members?.delete(ws)) return
+
+    this.broadcastPresence(songId)
   },
 
   removeEverywhere(ws: WebSocket) {
-    for (const set of rooms.values()) set.delete(ws)
-  },
-
-  broadcast(songId: string, event: WsServerEvent) {
-    const set = rooms.get(songId)
-
-    if (!set) return
-
-    const payload = JSON.stringify(event)
-    
-    for (const ws of set) {
-      if (ws.readyState === WebSocket.OPEN) ws.send(payload)
+    for (const [songId, members] of rooms) {
+      if (members.delete(ws)) this.broadcastPresence(songId)
     }
   },
 }

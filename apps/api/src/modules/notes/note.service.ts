@@ -34,7 +34,7 @@ export const NoteService = {
 
       const dto = toNoteDTO(note)
 
-      hub.broadcast(songId, { type: 'note.created', songId, note: dto, version })
+      hub.broadcast(songId, { type: 'note.created', songId, note: dto, version, actor })
 
       return dto
     } catch (e) {
@@ -48,7 +48,13 @@ export const NoteService = {
 
       const dto = toNoteDTO(note)
 
-      hub.broadcast(note.songId, { type: 'note.updated', songId: note.songId, note: dto, version })
+      hub.broadcast(note.songId, {
+        type: 'note.updated',
+        songId: note.songId,
+        note: dto,
+        version,
+        actor,
+      })
 
       return dto
     } catch (e) {
@@ -65,8 +71,9 @@ export const NoteService = {
         songId: note.songId,
         noteId: note.id,
         version,
+        actor,
       })
-      
+
     } catch (e) {
       throw translate(e)
     }

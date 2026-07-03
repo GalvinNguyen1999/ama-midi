@@ -1,3 +1,4 @@
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Button, Link as MuiLink, Stack, TextField, Typography } from '@mui/material'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -5,11 +6,7 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import { registerApi, storeSession } from '~/apis/auth'
 import { AuthLayout } from '~/features/auth/AuthLayout'
-
-interface RegisterForm {
-  email: string
-  password: string
-}
+import { registerSchema, type RegisterValues } from '~/features/auth/schemas'
 
 export function RegisterPage() {
   const navigate = useNavigate()
@@ -17,10 +14,10 @@ export function RegisterPage() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<RegisterForm>()
+  } = useForm<RegisterValues>({ resolver: zodResolver(registerSchema) })
   const [busy, setBusy] = useState(false)
 
-  const onSubmit = async (data: RegisterForm) => {
+  const onSubmit = async (data: RegisterValues) => {
     setBusy(true)
     try {
       const res = await registerApi(data.email, data.password)
@@ -41,7 +38,7 @@ export function RegisterPage() {
             fullWidth
             error={Boolean(errors.email)}
             helperText={errors.email?.message}
-            {...register('email', { required: 'Email is required' })}
+            {...register('email')}
           />
           <TextField
             label="Password"
@@ -49,7 +46,7 @@ export function RegisterPage() {
             fullWidth
             error={Boolean(errors.password)}
             helperText={errors.password?.message ?? 'At least 6 characters'}
-            {...register('password', { required: 'Password is required', minLength: { value: 6, message: 'At least 6 characters' } })}
+            {...register('password')}
           />
           <Button type="submit" variant="contained" size="large" disabled={busy}>
             {busy ? 'Creating…' : 'Create account'}

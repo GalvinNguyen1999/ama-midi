@@ -1,5 +1,5 @@
 import { Box, Typography } from '@mui/material'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { MouseEvent } from 'react'
 
 import type { Note } from '~/types/midi'
@@ -22,28 +22,63 @@ interface Props {
   notes: Note[]
   onCreateAt: (track: number, time: number) => void
   onSelectNote: (note: Note) => void
+  onMoveNote: (note: Note, track: number, time: number) => void
+  playhead: number | null
 }
 
-interface HoverPos {
+interface Pos {
   track: number
   time: number
+}
+
+interface DragState extends Pos {
+  note: Note
 }
 
 const GRID_WIDTH = TRACK_COUNT * TRACK_WIDTH
 const TIME_LABEL_STEP = 30
 const ROW_PX = TIME_LABEL_STEP * PX_PER_SECOND
 
-export function PianoRoll({ notes, onCreateAt, onSelectNote }: Props) {
-  const [hover, setHover] = useState<HoverPos | null>(null)
+export function PianoRoll({ notes, onCreateAt, onSelectNote, onMoveNote, playhead }: Props) {
+  const [hover, setHover] = useState<Pos | null>(null)
+  const [drag, setDrag] = useState<DragState | null>(null)
+  const suppressClick = useRef(false)
+  const playheadRef = useRef<HTMLDivElement | null>(null)
 
-  const posFromEvent = (e: MouseEvent<HTMLDivElement>): HoverPos => {
+  useEffect(() => {
+    if (playhead != null) playheadRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [playhead])
+
+  const posFromEvent = (e: MouseEvent<HTMLDivElement>): Pos => {
     const rect = e.currentTarget.getBoundingClientRect()
     return { track: xToTrack(e.clientX - rect.left), time: yToTime(e.clientY - rect.top) }
   }
 
-  const handleMove = (e: MouseEvent<HTMLDivElement>) => setHover(posFromEvent(e))
-  const handleLeave = () => setHover(null)
+  const handleMove = (e: MouseEvent<HTMLDivElement>) => {
+    const p = posFromEvent(e)
+    if (drag) setDrag((d) => (d ? { ...d, track: p.track, time: p.time } : d))
+    else setHover(p)
+  }
+
+  const handleLeave = () => {
+    setHover(null)
+    setDrag(null)
+  }
+
+  const handleMouseUp = () => {
+    if (!drag) return
+    const changed = drag.track !== drag.note.track || drag.time !== drag.note.time
+    if (changed) onMoveNote(drag.note, drag.track, drag.time)
+    else onSelectNote(drag.note)
+    suppressClick.current = true
+    setDrag(null)
+  }
+
   const handleClick = (e: MouseEvent<HTMLDivElement>) => {
+    if (suppressClick.current) {
+      suppressClick.current = false
+      return
+    }
     const p = posFromEvent(e)
     onCreateAt(p.track, p.time)
   }
@@ -92,22 +127,23 @@ export function PianoRoll({ notes, onCreateAt, onSelectNote }: Props) {
 
         <Box
           role="grid"
-          aria-label="Piano roll: click to add a note, click a note to edit"
+          aria-label="Piano roll: click to add a note, drag a note to move it, click a note to edit"
           onClick={handleClick}
           onMouseMove={handleMove}
           onMouseLeave={handleLeave}
+          onMouseUp={handleMouseUp}
           sx={{
             position: 'relative',
             width: GRID_WIDTH,
             height: GRID_HEIGHT,
-            cursor: 'crosshair',
+            cursor: drag ? 'grabbing' : 'crosshair',
             border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: 1,
             overflow: 'hidden',
             backgroundImage: `repeating-linear-gradient(to right, transparent, transparent ${TRACK_WIDTH - 1}px, rgba(255,255,255,0.08) ${TRACK_WIDTH}px), repeating-linear-gradient(to bottom, transparent, transparent ${ROW_PX - 1}px, rgba(255,255,255,0.06) ${ROW_PX}px)`,
           }}
         >
-          {hover ? (
+          {hover && !drag ? (
             <>
               <Box
                 sx={{
@@ -148,32 +184,56 @@ export function PianoRoll({ notes, onCreateAt, onSelectNote }: Props) {
             </>
           ) : null}
 
-          {notes.map((note) => (
+          {playhead != null ? (
             <Box
-              key={note.id}
-              role="button"
-              aria-label={`Note ${note.title} on track ${note.track} at ${note.time} seconds`}
-              onClick={(e) => {
-                e.stopPropagation()
-                onSelectNote(note)
-              }}
-              title={`${note.title} — Track ${note.track}, ${note.time}s`}
+              ref={playheadRef}
               sx={{
                 position: 'absolute',
-                left: trackCenterX(note.track) - NOTE_RADIUS,
-                top: timeToY(note.time) - NOTE_RADIUS,
-                width: NOTE_RADIUS * 2,
-                height: NOTE_RADIUS * 2,
-                borderRadius: '50%',
-                bgcolor: note.color,
-                border: '2px solid rgba(0,0,0,0.45)',
-                boxShadow: '0 0 6px rgba(0,0,0,0.5)',
-                cursor: 'pointer',
-                transition: 'transform 0.1s',
-                '&:hover': { transform: 'scale(1.3)', zIndex: 2 },
+                left: 0,
+                top: timeToY(playhead),
+                width: '100%',
+                height: 2,
+                bgcolor: '#22d3ee',
+                boxShadow: '0 0 8px #22d3ee',
+                pointerEvents: 'none',
+                zIndex: 3,
               }}
             />
-          ))}
+          ) : null}
+
+          {notes.map((note) => {
+            const active = drag?.note.id === note.id
+            const track = active ? drag.track : note.track
+            const time = active ? drag.time : note.time
+            return (
+              <Box
+                key={note.id}
+                role="button"
+                aria-label={`Note ${note.title} on track ${note.track} at ${note.time} seconds`}
+                onMouseDown={(e) => {
+                  e.stopPropagation()
+                  setHover(null)
+                  setDrag({ note, track: note.track, time: note.time })
+                }}
+                title={`${note.title} — Track ${note.track}, ${note.time}s`}
+                sx={{
+                  position: 'absolute',
+                  left: trackCenterX(track) - NOTE_RADIUS,
+                  top: timeToY(time) - NOTE_RADIUS,
+                  width: NOTE_RADIUS * 2,
+                  height: NOTE_RADIUS * 2,
+                  borderRadius: '50%',
+                  bgcolor: note.color,
+                  border: '2px solid rgba(0,0,0,0.45)',
+                  boxShadow: active ? '0 0 10px rgba(34,211,238,0.9)' : '0 0 6px rgba(0,0,0,0.5)',
+                  cursor: active ? 'grabbing' : 'grab',
+                  zIndex: active ? 4 : 1,
+                  transition: active ? 'none' : 'transform 0.1s',
+                  '&:hover': active ? undefined : { transform: 'scale(1.3)', zIndex: 2 },
+                }}
+              />
+            )
+          })}
 
           {notes.length === 0 ? (
             <Box
@@ -190,9 +250,7 @@ export function PianoRoll({ notes, onCreateAt, onSelectNote }: Props) {
               }}
             >
               <Typography variant="h6">This song is empty</Typography>
-              <Typography variant="body2">
-                Click anywhere on the grid to add your first note
-              </Typography>
+              <Typography variant="body2">Click anywhere on the grid to add your first note</Typography>
             </Box>
           ) : null}
         </Box>

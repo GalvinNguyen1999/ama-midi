@@ -1,10 +1,16 @@
 import type { NoteDTO } from '~/modules/notes/note.types'
 
+export interface PresenceUser {
+  id: string
+  email: string
+}
+
 export type WsServerEvent =
-  | { type: 'note.created'; songId: string; note: NoteDTO; version: number }
-  | { type: 'note.updated'; songId: string; note: NoteDTO; version: number }
-  | { type: 'note.deleted'; songId: string; noteId: string; version: number }
+  | { type: 'note.created'; songId: string; note: NoteDTO; version: number; actor?: string }
+  | { type: 'note.updated'; songId: string; note: NoteDTO; version: number; actor?: string }
+  | { type: 'note.deleted'; songId: string; noteId: string; version: number; actor?: string }
+  | { type: 'presence'; songId: string; users: PresenceUser[] }
 
 export type WsClientMessage =
-  | { type: 'join'; songId: string }
+  | { type: 'join'; songId: string; user?: PresenceUser }
   | { type: 'leave'; songId: string }

@@ -14,6 +14,8 @@ model User {
   passwordHash     String
   twoFactorSecret  String?
   twoFactorEnabled Boolean  @default(false)
+  songs            Song[]
+  collaborations   SongCollaborator[]
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -25,12 +27,29 @@ model Song {
   title     String
   bpm       Int         @default(120)
   version   Int         @default(0)
+  ownerId   String?     @db.Uuid
+  owner     User?       @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   notes     Note[]
   events    NoteEvent[]
+  collaborators SongCollaborator[]
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
+  @@index([ownerId])
   @@map("songs")
+}
+
+model SongCollaborator {
+  songId    String   @db.Uuid
+  userId    String   @db.Uuid
+  song      Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstSeen DateTime @default(now())
+  lastSeen  DateTime @default(now())
+
+  @@id([songId, userId])
+  @@index([userId])
+  @@map("song_collaborators")
 }
 
 model Note {

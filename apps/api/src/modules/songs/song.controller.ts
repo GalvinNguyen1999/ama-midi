@@ -9,7 +9,7 @@ import { stringParam } from '~/core/http/queryParsers'
 
 export const SongController = {
   create: asyncHandler(async (req: Request, res: Response) => {
-    const song = await SongService.create(req.body)
+    const song = await SongService.create(req.body, req.user?.id)
     res.status(StatusCodes.CREATED).json(song)
   }),
 
@@ -18,7 +18,7 @@ export const SongController = {
   }),
 
   getById: asyncHandler(async (req: Request, res: Response) => {
-    res.json(await SongService.getById(stringParam(req, 'id')))
+    res.json(await SongService.getById(stringParam(req, 'id'), req.user?.id))
   }),
 
   getEvents: asyncHandler(async (req: Request, res: Response) => {
@@ -26,7 +26,7 @@ export const SongController = {
   }),
 
   remove: asyncHandler(async (req: Request, res: Response) => {
-    await SongService.remove(stringParam(req, 'id'))
+    await SongService.remove(stringParam(req, 'id'), req.user?.id)
     res.status(StatusCodes.NO_CONTENT).send()
   }),
 }

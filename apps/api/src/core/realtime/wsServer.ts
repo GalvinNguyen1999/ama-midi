@@ -8,10 +8,14 @@ import { hub } from './hub'
 import { logger } from '~/config/logger'
 
 
+const presenceUserSchema = z.object({ id: z.string(), email: z.string() })
+
 const clientMessageSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('join'), songId: z.string().uuid() }),
+  z.object({ type: z.literal('join'), songId: z.string().uuid(), user: presenceUserSchema.optional() }),
   z.object({ type: z.literal('leave'), songId: z.string().uuid() }),
 ])
+
+const ANON: z.infer<typeof presenceUserSchema> = { id: 'anonymous', email: 'anonymous' }
 
 export function createWsServer(server: Server) {
   const wss = new WebSocketServer({ server })
@@ -32,7 +36,7 @@ export function createWsServer(server: Server) {
       const msg = parsed.data
 
       if (msg.type === 'join') {
-        hub.join(ws, msg.songId)
+        hub.join(ws, msg.songId, msg.user ?? ANON)
       } else {
         hub.leave(ws, msg.songId)
       }
