@@ -10,8 +10,8 @@ const schema = z.object({
   ACCESS_TOKEN_SECRET: z.string().min(1).default('dev-access-secret-change-me'),
   REFRESH_TOKEN_SECRET: z.string().min(1).default('dev-refresh-secret-change-me'),
   LOG_LEVEL: z.string().default('info'),
-  CORS_ORIGINS: z.string(),
-  FRONTEND_BASE_URL: z.url(),
+  CORS_ORIGINS: z.string().default('http://localhost:5173'),
+  FRONTEND_BASE_URL: z.url().default('http://localhost:5173'),
 })
 
 export const env = schema.parse(process.env)
