@@ -4,6 +4,7 @@ import {
   createNoteApi,
   createSongApi,
   deleteNoteApi,
+  deleteSongApi,
   getSong,
   listSongs,
   updateNoteApi,
@@ -62,6 +63,11 @@ export const removeNote = createAsyncThunk('song/removeNote', async (id: string)
   return id
 })
 
+export const removeSong = createAsyncThunk('song/removeSong', async (id: string) => {
+  await deleteSongApi(id)
+  return id
+})
+
 const songSlice = createSlice({
   name: 'song',
   initialState,
@@ -99,6 +105,10 @@ const songSlice = createSlice({
       })
       .addCase(removeNote.fulfilled, (state, action: PayloadAction<string>) => {
         if (state.current) removeNoteFromState(state, state.current.id, action.payload)
+      })
+      .addCase(removeSong.fulfilled, (state, action: PayloadAction<string>) => {
+        state.songs = state.songs.filter((s) => s.id !== action.payload)
+        if (state.current?.id === action.payload) state.current = null
       })
   },
 })

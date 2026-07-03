@@ -24,4 +24,9 @@ export const SongController = {
   getEvents: asyncHandler(async (req: Request, res: Response) => {
     res.json(await SongService.getEvents(stringParam(req, 'id')))
   }),
+
+  remove: asyncHandler(async (req: Request, res: Response) => {
+    await SongService.remove(stringParam(req, 'id'))
+    res.status(StatusCodes.NO_CONTENT).send()
+  }),
 }

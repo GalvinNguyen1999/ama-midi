@@ -19,4 +19,8 @@ export const SongRepo = {
   listEvents(songId: string) {
     return prisma.noteEvent.findMany({ where: { songId }, orderBy: { id: 'asc' } })
   },
+
+  remove(id: string) {
+    return prisma.song.delete({ where: { id } })
+  },
 }

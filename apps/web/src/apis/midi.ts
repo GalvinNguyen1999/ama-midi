@@ -16,6 +16,10 @@ export const getSong = async (id: string): Promise<SongWithNotes> => {
   return data
 }
 
+export const deleteSongApi = async (id: string): Promise<void> => {
+  await authorizedAxiosInstance.delete(`/songs/${id}`)
+}
+
 export const createNoteApi = async (songId: string, input: NoteInput): Promise<Note> => {
   const { data } = await authorizedAxiosInstance.post<Note>(`/songs/${songId}/notes`, input)
   return data

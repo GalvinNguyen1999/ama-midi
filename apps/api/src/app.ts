@@ -5,12 +5,13 @@ import morgan from 'morgan'
 
 import { corsMiddleware } from '~/config/cors'
 import { errorHandler } from '~/core/http/errorHandler'
+import { globalLimiter } from '~/core/http/rateLimit'
 import routes from '~/routes'
 
 export const createApp = () => {
   const app = express()
 
-  app.set('trust proxy', true)
+  app.set('trust proxy', 1)
 
   app.disable('etag')
 
@@ -26,6 +27,7 @@ export const createApp = () => {
   app.use(express.json())
   app.use(cookieParser())
   app.use(morgan('dev'))
+  app.use(globalLimiter)
 
   app.use('/api', routes)
 

@@ -14,6 +14,7 @@ router.post('/', validateRequest(createSongSchema), SongController.create)
 router.get('/', SongController.list)
 router.get('/:id', validateRequest(songIdParamSchema), SongController.getById)
 router.get('/:id/events', validateRequest(songIdParamSchema), SongController.getEvents)
+router.delete('/:id', validateRequest(songIdParamSchema), SongController.remove)
 router.post('/:songId/notes', validateRequest(createNoteSchema), NoteController.create)
 
 export default router
