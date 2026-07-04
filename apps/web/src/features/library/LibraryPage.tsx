@@ -306,9 +306,14 @@ export function LibraryPage() {
                         label={relativeTime(song.updatedAt)}
                       />
                     </Stack>
-                    {song.collaborators.length > 0 ? (
-                      <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mt: 1.5 }}>
-                        <GroupIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                    <Stack
+                      direction="row"
+                      spacing={0.75}
+                      alignItems="center"
+                      sx={{ mt: 1.5, minHeight: 24 }}
+                    >
+                      <GroupIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                      {song.collaborators.length > 0 ? (
                         <AvatarGroup
                           max={4}
                           sx={{ '& .MuiAvatar-root': { width: 24, height: 24, fontSize: 11 } }}
@@ -319,8 +324,12 @@ export function LibraryPage() {
                             </Tooltip>
                           ))}
                         </AvatarGroup>
-                      </Stack>
-                    ) : null}
+                      ) : (
+                        <Typography variant="caption" color="text.disabled">
+                          Just you
+                        </Typography>
+                      )}
+                    </Stack>
                   </CardContent>
                 </CardActionArea>
                 <Stack direction="row" justifyContent="flex-end" sx={{ px: 1, pb: 1 }}>
