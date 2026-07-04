@@ -1,12 +1,12 @@
 import { Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
-import { midiToNotes } from './midi'
 import { NoteService } from './note.service'
 
 import { asyncHandler } from '~/core/asyncHandler'
 import { ApiError } from '~/core/http/ApiError'
 import { stringParam } from '~/core/http/queryParsers'
+import { midiToNotes } from '~/utils/midi'
 
 
 export const NoteController = {

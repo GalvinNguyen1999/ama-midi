@@ -1,4 +1,4 @@
-import { Box, Chip, Typography } from '@mui/material'
+import { Box, Chip, Tooltip, Typography } from '@mui/material'
 import { useEffect, useRef } from 'react'
 
 import type { Note } from '~/types/midi'
@@ -26,6 +26,8 @@ interface Props {
   playhead: number | null
   loading?: boolean
   readOnly?: boolean
+  suggestions?: { track: number; time: number; color: string }[]
+  onAcceptSuggestion?: (s: { track: number; time: number; color: string }) => void
 }
 
 const GRID_WIDTH = TRACK_COUNT * TRACK_WIDTH
@@ -41,6 +43,8 @@ export function PianoRoll({
   playhead,
   loading,
   readOnly,
+  suggestions,
+  onAcceptSuggestion,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const playheadRef = useRef<HTMLDivElement | null>(null)
@@ -203,6 +207,27 @@ export function PianoRoll({
               }}
             />
           ) : null}
+
+          {suggestions?.map((s, i) => (
+            <Tooltip key={`sg-${i}`} title="Suggested — click to add">
+              <Box
+                onClick={() => onAcceptSuggestion?.(s)}
+                sx={{
+                  position: 'absolute',
+                  left: trackCenterX(s.track) - NOTE_RADIUS,
+                  top: timeToY(s.time) - NOTE_RADIUS,
+                  width: NOTE_RADIUS * 2,
+                  height: NOTE_RADIUS * 2,
+                  borderRadius: '50%',
+                  border: '2px dashed #22d3ee',
+                  bgcolor: 'rgba(34,211,238,0.15)',
+                  cursor: 'pointer',
+                  zIndex: 5,
+                  '&:hover': { bgcolor: 'rgba(34,211,238,0.35)' },
+                }}
+              />
+            </Tooltip>
+          ))}
 
           {playhead != null ? (
             <Box

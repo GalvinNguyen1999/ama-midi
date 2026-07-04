@@ -24,6 +24,7 @@ router.get('/invitations', SongController.myInvites)
 
 router.get('/:id', validateRequest(songIdParamSchema), SongController.getById)
 router.get('/:id/events', validateRequest(songIdParamSchema), SongController.getEvents)
+router.get('/:id/suggest', validateRequest(songIdParamSchema), SongController.suggest)
 router.patch('/:id', validateRequest(renameSongSchema), SongController.rename)
 router.patch('/:id/share', validateRequest(setShareSchema), SongController.setShare)
 router.delete('/:id', validateRequest(songIdParamSchema), SongController.remove)

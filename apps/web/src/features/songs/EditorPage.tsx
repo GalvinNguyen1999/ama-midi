@@ -1,4 +1,5 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import CircleIcon from '@mui/icons-material/Circle'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import EditIcon from '@mui/icons-material/Edit'
@@ -46,10 +47,12 @@ import { toast } from 'react-toastify'
 
 import {
   getAllNotes,
+  getSuggestionsApi,
   importMidiApi,
   inviteCollaboratorApi,
   removeCollaboratorApi,
   seedNotesApi,
+  type SuggestedNote,
 } from '~/apis/midi'
 import { DEFAULT_NOTE_COLOR } from '~/features/pianoRoll/config'
 import { PianoRoll } from '~/features/pianoRoll/PianoRoll'
@@ -140,6 +143,8 @@ export function EditorPage() {
   const [inviting, setInviting] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [importing, setImporting] = useState(false)
+  const [suggesting, setSuggesting] = useState(false)
+  const [suggestions, setSuggestions] = useState<SuggestedNote[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [seeding, setSeeding] = useState(false)
   const { scrollRef, onScroll, reload } = useWindowedNotes(id)
@@ -182,6 +187,7 @@ export function EditorPage() {
 
   useEffect(() => {
     resetHistory()
+    setSuggestions([])
   }, [id, resetHistory])
 
   useEffect(() => {
@@ -334,6 +340,51 @@ export function EditorPage() {
     } finally {
       setInviting(false)
     }
+  }
+
+  const handleSuggest = async () => {
+    if (!current) return
+    setSuggesting(true)
+    try {
+      const res = await getSuggestionsApi(current.id)
+      setSuggestions(res)
+      if (res.length === 0) toast.info('No suggestion available yet')
+    } catch {
+      // interceptor surfaces the error
+    } finally {
+      setSuggesting(false)
+    }
+  }
+
+  const acceptSuggestion = async (s: SuggestedNote) => {
+    if (!current) return
+    const res = await dispatch(
+      addNote({ songId: current.id, input: { title: 'Note', track: s.track, time: s.time, color: s.color } }),
+    )
+    if (addNote.fulfilled.match(res)) {
+      recordHistory({ kind: 'create', note: res.payload })
+      setSuggestions((prev) => prev.filter((x) => !(x.track === s.track && x.time === s.time)))
+      toast.success('Note added')
+    }
+  }
+
+  const acceptAllSuggestions = async () => {
+    if (!current || suggestions.length === 0) return
+    let added = 0
+    for (const s of suggestions) {
+      const res = await dispatch(
+        addNote({
+          songId: current.id,
+          input: { title: 'Note', track: s.track, time: s.time, color: s.color },
+        }),
+      )
+      if (addNote.fulfilled.match(res)) {
+        recordHistory({ kind: 'create', note: res.payload })
+        added += 1
+      }
+    }
+    setSuggestions([])
+    if (added > 0) toast.success(`Added ${added} suggested note${added > 1 ? 's' : ''}`)
   }
 
   const handleExport = async () => {
@@ -551,6 +602,13 @@ export function EditorPage() {
                   <span>
                     <IconButton size="small" onClick={() => redo()} disabled={!canRedo}>
                       <RedoIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Tooltip title="Suggest the next note (AI)">
+                  <span>
+                    <IconButton size="small" color="secondary" onClick={handleSuggest} disabled={suggesting}>
+                      <AutoAwesomeIcon fontSize="small" />
                     </IconButton>
                   </span>
                 </Tooltip>
@@ -816,6 +874,8 @@ export function EditorPage() {
                 playhead={playing ? playhead : null}
                 loading={notesLoading > 0}
                 readOnly={readOnly}
+                suggestions={canEdit ? suggestions : []}
+                onAcceptSuggestion={acceptSuggestion}
               />
             </Box>
 
@@ -840,6 +900,38 @@ export function EditorPage() {
                 <Typography variant="caption" color="text.secondary">
                   Loading notes…
                 </Typography>
+              </Paper>
+            ) : null}
+
+            {suggestions.length > 0 ? (
+              <Paper
+                elevation={4}
+                sx={{
+                  position: 'absolute',
+                  top: 16,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  px: 1.5,
+                  py: 0.5,
+                  borderRadius: 5,
+                }}
+              >
+                <AutoAwesomeIcon fontSize="small" color="secondary" />
+                <Typography variant="caption" color="text.secondary">
+                  {suggestions.length} suggested — click a ghost, or
+                </Typography>
+                <Button size="small" variant="contained" onClick={acceptAllSuggestions}>
+                  Accept all
+                </Button>
+                <Button size="small" onClick={handleSuggest} disabled={suggesting}>
+                  Another
+                </Button>
+                <Button size="small" color="inherit" onClick={() => setSuggestions([])}>
+                  Dismiss
+                </Button>
               </Paper>
             ) : null}
           </Box>

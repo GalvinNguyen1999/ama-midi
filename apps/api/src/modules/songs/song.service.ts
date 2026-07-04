@@ -7,6 +7,7 @@ import { ApiError } from '~/core/http/ApiError'
 import { emit } from '~/core/realtime/emit'
 import { AuthRepo } from '~/modules/auth/auth.repo'
 import { toNoteDTO } from '~/modules/notes/note.types'
+import { suggestNotes } from '~/utils/suggest'
 
 export const SongService = {
   async create(input: { title: string; bpm?: number }, ownerId?: string) {
@@ -37,6 +38,12 @@ export const SongService = {
   async getNotes(id: string, from?: number, to?: number) {
     const notes = await SongRepo.listNotes(id, from, to)
     return notes.map(toNoteDTO)
+  },
+
+  async suggest(id: string, count?: number) {
+    const notes = await SongRepo.listNotes(id)
+    const input = notes.map((n) => ({ track: n.track, time: n.time.toNumber(), color: n.color }))
+    return suggestNotes(input, { count })
   },
 
   async getEvents(id: string) {

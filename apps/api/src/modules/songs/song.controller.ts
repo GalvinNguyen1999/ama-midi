@@ -37,6 +37,11 @@ export const SongController = {
     res.json(await SongService.getEvents(stringParam(req, 'id')))
   }),
 
+  suggest: asyncHandler(async (req: Request, res: Response) => {
+    const count = Number(req.query.count)
+    res.json(await SongService.suggest(stringParam(req, 'id'), Number.isFinite(count) ? count : undefined))
+  }),
+
   rename: asyncHandler(async (req: Request, res: Response) => {
     const { title } = req.body as { title: string }
     res.json(await SongService.rename(stringParam(req, 'id'), req.user?.id, title, req.user?.email))

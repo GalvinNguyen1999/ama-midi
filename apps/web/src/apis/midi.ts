@@ -71,6 +71,17 @@ export const getSongEvents = async (id: string): Promise<NoteEvent[]> => {
   return data
 }
 
+export interface SuggestedNote {
+  track: number
+  time: number
+  color: string
+}
+
+export const getSuggestionsApi = async (id: string): Promise<SuggestedNote[]> => {
+  const { data } = await authorizedAxiosInstance.get<SuggestedNote[]>(`/songs/${id}/suggest`)
+  return data
+}
+
 export const createNoteApi = async (songId: string, input: NoteInput): Promise<Note> => {
   const { data } = await authorizedAxiosInstance.post<Note>(`/songs/${songId}/notes`, input)
   return data

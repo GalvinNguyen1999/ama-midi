@@ -10,7 +10,7 @@ const mockedRepo = SongRepo as jest.Mocked<typeof SongRepo>
 const mockedAuth = AuthRepo as jest.Mocked<typeof AuthRepo>
 
 describe('SongService', () => {
-  afterEach(() => jest.clearAllMocks())
+  afterEach(() => jest.resetAllMocks())
 
   it('getById throws 404 when song is missing', async () => {
     mockedRepo.findById.mockResolvedValue(null as never)

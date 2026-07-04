@@ -25,7 +25,7 @@ The grid uses **X = 8 tracks (horizontal)** and **Y = time 0–300s (vertical, 0
 | **DevOps & Cloud** | Dockerized (`docker-compose`), GitHub Actions CI (lint/typecheck/test), deployed on Render via `render.yaml` blueprint. |
 | **Performance** | **Canvas** rendering + **viewport windowing** to handle 10,000+ notes; composite index + range endpoint; built-in stress-seed tool. |
 | **Collaboration extras** | Song ownership, share-link invites (`/songs/:id`), collaborator tracking. |
-| **AI Innovation** | AI Note Suggester — _in progress_. |
+| **AI Innovation** | **AI Note Suggester** — a first-order Markov model learns the track-to-track transitions and typical time gap from the current sequence and proposes the next note(s) as clickable ghost notes. Runs in-process (no external API/key), so it works offline and on the free tier. |
 
 Also: **ledger pattern** — every note change is recorded in `note_events` (create/update/delete + payload + actor) as an auditable history.
 

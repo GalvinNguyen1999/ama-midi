@@ -1,6 +1,6 @@
 import { Midi } from '@tonejs/midi'
 
-import { midiToNotes } from '~/modules/notes/midi'
+import { midiToNotes } from '~/utils/midi'
 
 const TRACK_MIDI = [60, 62, 64, 67, 69, 72, 74, 76]
 
