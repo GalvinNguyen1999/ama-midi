@@ -40,7 +40,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
-import { seedNotesApi } from '~/apis/midi'
 import { PianoRoll } from '~/features/pianoRoll/PianoRoll'
 import { DeleteSongDialog } from '~/features/songs/DeleteSongDialog'
 import { HistoryDrawer } from '~/features/songs/HistoryDrawer'
@@ -53,12 +52,14 @@ import { useMidiIO } from '~/features/songs/useMidiIO'
 import { useNoteEditing, toPatch } from '~/features/songs/useNoteEditing'
 import { usePlayback, type Timbre } from '~/features/songs/usePlayback'
 import { useSharing } from '~/features/songs/useSharing'
+import { useSongActions } from '~/features/songs/useSongActions'
 import { useSongRealtime } from '~/features/songs/useSongRealtime'
 import { useSongTitle } from '~/features/songs/useSongTitle'
 import { useSuggestions } from '~/features/songs/useSuggestions'
+import { useUndoRedoShortcuts } from '~/features/songs/useUndoRedoShortcuts'
 import { useWindowedNotes } from '~/features/songs/useWindowedNotes'
 import { useAppDispatch, useAppSelector } from '~/store/hooks'
-import { addNote, editNote, openSong, removeNote, removeSong } from '~/store/songSlice'
+import { addNote, editNote, openSong, removeNote } from '~/store/songSlice'
 import { readUser } from '~/utils/session'
 
 export function EditorPage() {
@@ -88,14 +89,12 @@ export function EditorPage() {
     ? current.collaborators.filter((c) => c.userId !== current.ownerId)
     : []
 
-  const [deleteOpen, setDeleteOpen] = useState(false)
-  const [deleting, setDeleting] = useState(false)
   const [moreAnchor, setMoreAnchor] = useState<null | HTMLElement>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
-  const [seeding, setSeeding] = useState(false)
   const title = useSongTitle(current, isOwner)
   const sharing = useSharing(current)
   const { scrollRef, onScroll, reload } = useWindowedNotes(id)
+  const songActions = useSongActions({ current, reload, navigate })
   const {
     record: recordHistory,
     undo,
@@ -142,56 +141,7 @@ export function EditorPage() {
     resetHistory()
   }, [id, resetHistory])
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey)) return
-      const key = e.key.toLowerCase()
-      if (key !== 'z' && key !== 'y') return
-
-      const target = e.target as HTMLElement | null
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return
-
-      e.preventDefault()
-      if (key === 'y' || e.shiftKey) redo()
-      else undo()
-    }
-
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [undo, redo])
-
-  const handleDeleteSong = async () => {
-    if (!current) return
-    setDeleting(true)
-    const res = await dispatch(removeSong(current.id))
-    setDeleting(false)
-    if (removeSong.fulfilled.match(res)) {
-      toast.success('Song deleted')
-      navigate('/songs')
-    }
-  }
-
-  const handleSeed = async (count: number) => {
-    if (!current) return
-    setMoreAnchor(null)
-    setSeeding(true)
-    const toastId = toast.loading(`Seeding ${count.toLocaleString()} notes…`)
-    try {
-      const { inserted } = await seedNotesApi(current.id, count)
-      await dispatch(openSong(current.id))
-      reload()
-      toast.update(toastId, {
-        render: `Seeded ${inserted.toLocaleString()} notes`,
-        type: 'success',
-        isLoading: false,
-        autoClose: 2500,
-      })
-    } catch {
-      toast.dismiss(toastId)
-    } finally {
-      setSeeding(false)
-    }
-  }
+  useUndoRedoShortcuts(undo, redo)
 
   return (
     <>
@@ -361,9 +311,9 @@ export function EditorPage() {
                   <IconButton
                     size="small"
                     onClick={(e) => setMoreAnchor(e.currentTarget)}
-                    disabled={seeding}
+                    disabled={songActions.seeding}
                   >
-                    {seeding ? <CircularProgress size={18} /> : <MoreVertIcon />}
+                    {songActions.seeding ? <CircularProgress size={18} /> : <MoreVertIcon />}
                   </IconButton>
                 </span>
               </Tooltip>
@@ -417,7 +367,7 @@ export function EditorPage() {
                 <MenuItem
                   onClick={() => {
                     setMoreAnchor(null)
-                    setDeleteOpen(true)
+                    songActions.openDelete()
                   }}
                 >
                   <ListItemIcon>
@@ -436,10 +386,22 @@ export function EditorPage() {
                         {(current?.noteCount ?? 0).toLocaleString()} loaded
                       </Typography>
                     </MenuItem>,
-                    <MenuItem key="seed-1k" onClick={() => handleSeed(1000)}>
+                    <MenuItem
+                      key="seed-1k"
+                      onClick={() => {
+                        setMoreAnchor(null)
+                        songActions.seed(1000)
+                      }}
+                    >
                       + 1,000 notes
                     </MenuItem>,
-                    <MenuItem key="seed-10k" onClick={() => handleSeed(10000)}>
+                    <MenuItem
+                      key="seed-10k"
+                      onClick={() => {
+                        setMoreAnchor(null)
+                        songActions.seed(10000)
+                      }}
+                    >
                       + 10,000 notes
                     </MenuItem>,
                   ]
@@ -543,11 +505,11 @@ export function EditorPage() {
       </Container>
 
       <DeleteSongDialog
-        open={deleteOpen}
+        open={songActions.deleteOpen}
         title={current?.title ?? ''}
-        deleting={deleting}
-        onClose={() => setDeleteOpen(false)}
-        onConfirm={handleDeleteSong}
+        deleting={songActions.deleting}
+        onClose={songActions.closeDelete}
+        onConfirm={songActions.deleteSong}
       />
 
       <NoteDialog
