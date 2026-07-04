@@ -29,35 +29,49 @@ export function useUserNotifications(userId: string | undefined) {
         return
       }
 
-      if (event.type === 'invited') {
-        const by = event.by ? event.by.split('@')[0] : 'Someone'
-        toast.info(`${by} invited you to “${event.title}”`)
-        dispatch(fetchInvites())
-      } else if (event.type === 'invite.responded') {
-        const by = event.by ? event.by.split('@')[0] : 'Someone'
-        if (event.accepted) {
-          dispatch(
-            applyCollaboratorUpsert({
-              songId: event.songId,
-              collaborator: {
-                userId: event.userId,
-                email: event.by,
-                status: 'accepted',
-                lastSeen: new Date().toISOString(),
-              },
-            }),
-          )
-        } else {
-          dispatch(applyCollaboratorRemoved({ songId: event.songId, userId: event.userId }))
+      const leaveIfViewing = (songId: string) => {
+        if (pathRef.current === `/songs/${songId}`) navigate('/songs')
+      }
+
+      switch (event.type) {
+        case 'invited': {
+          const by = event.by ? event.by.split('@')[0] : 'Someone'
+          toast.info(`${by} invited you to “${event.title}”`)
+          dispatch(fetchInvites())
+          break
         }
-        toast.info(`${by} ${event.accepted ? 'accepted' : 'declined'} “${event.title}”`)
-      } else if (event.type === 'song.removed') {
-        dispatch(applySongRemoved({ songId: event.songId }))
-        if (pathRef.current === `/songs/${event.songId}`) navigate('/songs')
-      } else if (event.type === 'access.revoked') {
-        dispatch(applySongRemoved({ songId: event.songId }))
-        toast.info(`You were removed from “${event.title}”`)
-        if (pathRef.current === `/songs/${event.songId}`) navigate('/songs')
+
+        case 'invite.responded': {
+          const by = event.by ? event.by.split('@')[0] : 'Someone'
+          if (event.accepted) {
+            dispatch(
+              applyCollaboratorUpsert({
+                songId: event.songId,
+                collaborator: {
+                  userId: event.userId,
+                  email: event.by,
+                  status: 'accepted',
+                  lastSeen: new Date().toISOString(),
+                },
+              }),
+            )
+          } else {
+            dispatch(applyCollaboratorRemoved({ songId: event.songId, userId: event.userId }))
+          }
+          toast.info(`${by} ${event.accepted ? 'accepted' : 'declined'} “${event.title}”`)
+          break
+        }
+
+        case 'song.removed':
+          dispatch(applySongRemoved({ songId: event.songId }))
+          leaveIfViewing(event.songId)
+          break
+
+        case 'access.revoked':
+          dispatch(applySongRemoved({ songId: event.songId }))
+          toast.info(`You were removed from “${event.title}”`)
+          leaveIfViewing(event.songId)
+          break
       }
     }
 
