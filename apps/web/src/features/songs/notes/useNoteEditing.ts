@@ -113,6 +113,20 @@ export function useNoteEditing(current: SongWithNotes | null, record: (entry: Hi
     })
   }
 
+  const updateFields = async (
+    note: Note,
+    patch: { title?: string; description?: string; track?: number; time?: number; color?: string },
+  ) => {
+    const next = { ...note, ...patch }
+    dispatch(applyNoteUpsert(next))
+    const res = await dispatch(editNote({ id: note.id, input: patch }))
+    if (editNote.rejected.match(res)) {
+      dispatch(applyNoteUpsert(note))
+      return
+    }
+    record({ kind: 'update', id: note.id, before: toPatch(note), after: toPatch(next) })
+  }
+
   const moveMany = async (moves: { note: Note; track: number; time: number }[]) => {
     for (const m of moves) dispatch(applyNoteUpsert({ ...m.note, track: m.track, time: m.time }))
     for (const m of moves) {
@@ -179,6 +193,7 @@ export function useNoteEditing(current: SongWithNotes | null, record: (entry: Hi
     deleteNote,
     moveNote,
     moveMany,
+    updateFields,
     duplicate,
     deleteMany,
   }

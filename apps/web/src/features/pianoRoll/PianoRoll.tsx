@@ -40,6 +40,7 @@ interface Props {
   onMoveMany?: (moves: { note: Note; track: number; time: number }[]) => void
   onDuplicate?: (notes: Note[]) => void
   onDeleteMany: (ids: string[]) => void
+  onSelectionChange?: (ids: string[]) => void
   playhead: number | null
   onSeek?: (time: number) => void
   loading?: boolean
@@ -70,6 +71,7 @@ export function PianoRoll({
   onMoveMany,
   onDuplicate,
   onDeleteMany,
+  onSelectionChange,
   playhead,
   onSeek,
   loading,
@@ -102,6 +104,7 @@ export function PianoRoll({
     onMoveMany,
     onDuplicate,
     onDeleteMany,
+    onSelectionChange,
     readOnly,
   })
 

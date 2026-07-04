@@ -159,6 +159,23 @@ describe('usePianoRollInteraction', () => {
     expect(onMoveMany).toHaveBeenCalledWith([{ note, track: note.track + 1, time: note.time }])
   })
 
+  it('selects a single clicked note and reports the change', () => {
+    const onSelectionChange = jest.fn()
+    const { result } = renderHook(() =>
+      usePianoRollInteraction({
+        notes: [note],
+        onCreateAt: jest.fn(),
+        onSelectNote: jest.fn(),
+        onMoveNote: jest.fn(),
+        onSelectionChange,
+      }),
+    )
+    act(() => result.current.handlers.onMouseDown(evt(NX, NY)))
+    act(() => result.current.handlers.onMouseUp())
+    expect(result.current.selection.has('n1')).toBe(true)
+    expect(onSelectionChange).toHaveBeenLastCalledWith(['n1'])
+  })
+
   it('opens and closes a context menu on right-click over a note', () => {
     const { view } = setup()
     act(() =>

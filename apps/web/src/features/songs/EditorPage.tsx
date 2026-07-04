@@ -6,6 +6,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
 import { PianoRoll } from '~/features/pianoRoll/PianoRoll'
+import { EditorSidebar } from '~/features/songs/EditorSidebar'
 import { DeleteSongDialog } from '~/features/songs/toolbar/DeleteSongDialog'
 import { EditorToolbar } from '~/features/songs/toolbar/EditorToolbar'
 import { NoteDialog } from '~/features/songs/notes/NoteDialog'
@@ -94,6 +95,8 @@ export function EditorPage() {
     reload,
   })
   const notes = useNoteEditing(current, recordHistory)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const selectedNotes = current ? current.notes.filter((n) => selectedIds.includes(n.id)) : []
 
   useEffect(() => {
     if (id) dispatch(openSong(id))
@@ -151,8 +154,8 @@ export function EditorPage() {
         {current ? <OnboardingCallout /> : null}
 
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Click the grid to add a note, drag a note to move it, click a note to edit. Time flows top →
-          bottom (0–300s), tracks left → right.
+          Click the grid to add a note, drag to move it, click a note to edit it in the panel. Time
+          flows top → bottom (0–300s), tracks left → right.
         </Typography>
 
         {loading && !current ? (
@@ -160,13 +163,23 @@ export function EditorPage() {
             <CircularProgress />
           </Box>
         ) : current ? (
-          <Box sx={{ position: 'relative', width: 'fit-content', maxWidth: '100%', mx: 'auto' }}>
-            <Box ref={scrollRef} onScroll={onScroll} sx={{ maxHeight: '72vh', overflow: 'auto' }}>
-              <PianoRoll
-                notes={current.notes}
-                onCreateAt={notes.openCreate}
-                onSelectNote={notes.openEdit}
-                onMoveNote={notes.moveNote}
+          <Box
+            sx={{
+              display: 'flex',
+              gap: 3,
+              justifyContent: 'center',
+              alignItems: 'flex-start',
+              flexWrap: { xs: 'wrap', md: 'nowrap' },
+            }}
+          >
+            <Box sx={{ position: 'relative', width: 'fit-content', maxWidth: '100%' }}>
+              <Box ref={scrollRef} onScroll={onScroll} sx={{ maxHeight: '72vh', overflow: 'auto' }}>
+                <PianoRoll
+                  notes={current.notes}
+                  onCreateAt={notes.openCreate}
+                  onSelectNote={() => undefined}
+                  onSelectionChange={setSelectedIds}
+                  onMoveNote={notes.moveNote}
                 onMoveMany={notes.moveMany}
                 onDuplicate={notes.duplicate}
                 onDeleteMany={notes.deleteMany}
@@ -215,6 +228,20 @@ export function EditorPage() {
                 onDismiss={clear}
               />
             ) : null}
+            </Box>
+
+            <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+              <EditorSidebar
+                selected={selectedNotes}
+                canEdit={canEdit}
+                onUpdateField={notes.updateFields}
+                onDuplicate={notes.duplicate}
+                onDeleteMany={notes.deleteMany}
+                onEditDetails={notes.openEdit}
+                presence={presence}
+                userId={user?.id}
+              />
+            </Box>
           </Box>
         ) : (
           <Paper variant="outlined" sx={{ p: 8, textAlign: 'center', borderRadius: 4, mt: 4 }}>

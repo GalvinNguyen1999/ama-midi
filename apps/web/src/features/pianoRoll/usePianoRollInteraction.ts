@@ -44,6 +44,7 @@ interface Params {
   onMoveMany?: (moves: { note: Note; track: number; time: number }[]) => void
   onDuplicate?: (notes: Note[]) => void
   onDeleteMany?: (ids: string[]) => void
+  onSelectionChange?: (ids: string[]) => void
   readOnly?: boolean
 }
 
@@ -82,6 +83,7 @@ export function usePianoRollInteraction({
   onMoveMany,
   onDuplicate,
   onDeleteMany,
+  onSelectionChange,
   readOnly = false,
 }: Params): PianoRollInteraction {
   const [hover, setHover] = useState<Pos | null>(null)
@@ -100,6 +102,8 @@ export function usePianoRollInteraction({
   moveManyRef.current = onMoveMany
   const duplicateRef = useRef(onDuplicate)
   duplicateRef.current = onDuplicate
+  const selectionChangeRef = useRef(onSelectionChange)
+  selectionChangeRef.current = onSelectionChange
   const notesRef = useRef(notes)
   notesRef.current = notes
   const selectionRef = useRef(selection)
@@ -200,6 +204,10 @@ export function usePianoRollInteraction({
     return () => window.removeEventListener('keydown', onKey)
   }, [readOnly])
 
+  useEffect(() => {
+    selectionChangeRef.current?.([...selection])
+  }, [selection])
+
   const onMouseMove = (e: MouseEvent<HTMLDivElement>) => {
     if (readOnly) return
     const { x, y, pos } = posFromEvent(e)
@@ -259,6 +267,7 @@ export function usePianoRollInteraction({
           onMoveNote(drag.note, drag.track, drag.time)
         }
       } else {
+        setSelection(new Set([drag.note.id]))
         onSelectNote(drag.note)
       }
       suppressClick.current = true
