@@ -8,6 +8,7 @@ import {
   getNotesWindow,
   getSong,
   listSongs,
+  setShareModeApi,
   updateNoteApi,
 } from '~/apis/midi'
 import type { Note, NoteInput, NoteUpdate, Song, SongDetail, SongWithNotes } from '~/types/midi'
@@ -87,6 +88,11 @@ export const removeSong = createAsyncThunk('song/removeSong', async (id: string)
   return id
 })
 
+export const setShareMode = createAsyncThunk(
+  'song/setShareMode',
+  (args: { id: string; shareMode: 'edit' | 'view' }) => setShareModeApi(args.id, args.shareMode),
+)
+
 const songSlice = createSlice({
   name: 'song',
   initialState,
@@ -146,6 +152,12 @@ const songSlice = createSlice({
       .addCase(removeSong.fulfilled, (state, action: PayloadAction<string>) => {
         state.songs = state.songs.filter((s) => s.id !== action.payload)
         if (state.current?.id === action.payload) state.current = null
+      })
+      .addCase(setShareMode.fulfilled, (state, action: PayloadAction<Song>) => {
+        const updated = action.payload
+        if (state.current?.id === updated.id) state.current.shareMode = updated.shareMode
+        const row = state.songs.find((s) => s.id === updated.id)
+        if (row) row.shareMode = updated.shareMode
       })
   },
 })

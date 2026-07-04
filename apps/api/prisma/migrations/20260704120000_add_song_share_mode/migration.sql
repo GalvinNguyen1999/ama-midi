@@ -1,0 +1,1 @@
+ALTER TABLE "songs" ADD COLUMN "shareMode" TEXT NOT NULL DEFAULT 'edit';

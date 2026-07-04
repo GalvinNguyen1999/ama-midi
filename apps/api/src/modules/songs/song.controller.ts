@@ -37,6 +37,11 @@ export const SongController = {
     res.json(await SongService.getEvents(stringParam(req, 'id')))
   }),
 
+  setShare: asyncHandler(async (req: Request, res: Response) => {
+    const { shareMode } = req.body as { shareMode: 'edit' | 'view' }
+    res.json(await SongService.setShareMode(stringParam(req, 'id'), req.user?.id, shareMode))
+  }),
+
   remove: asyncHandler(async (req: Request, res: Response) => {
     await SongService.remove(stringParam(req, 'id'), req.user?.id)
     res.status(StatusCodes.NO_CONTENT).send()

@@ -32,6 +32,58 @@ describe('SongService', () => {
     expect(mockedRepo.remove).toHaveBeenCalledWith('s1')
   })
 
+  it('assertCanEdit throws 404 when the song is missing', async () => {
+    mockedRepo.findAccess.mockResolvedValue(null as never)
+    await expect(SongService.assertCanEdit('missing', 'user-1')).rejects.toMatchObject({
+      statusCode: 404,
+    })
+  })
+
+  it('assertCanEdit throws 403 for a non-owner when the song is view-only', async () => {
+    mockedRepo.findAccess.mockResolvedValue({ ownerId: 'owner-1', shareMode: 'view' } as never)
+    await expect(SongService.assertCanEdit('s1', 'intruder')).rejects.toMatchObject({
+      statusCode: 403,
+    })
+  })
+
+  it('assertCanEdit allows a non-owner when the song is editable', async () => {
+    mockedRepo.findAccess.mockResolvedValue({ ownerId: 'owner-1', shareMode: 'edit' } as never)
+    await expect(SongService.assertCanEdit('s1', 'guest')).resolves.toBeUndefined()
+  })
+
+  it('assertCanEdit allows the owner even when view-only', async () => {
+    mockedRepo.findAccess.mockResolvedValue({ ownerId: 'owner-1', shareMode: 'view' } as never)
+    await expect(SongService.assertCanEdit('s1', 'owner-1')).resolves.toBeUndefined()
+  })
+
+  it('setShareMode throws 403 when the caller is not the owner', async () => {
+    mockedRepo.findAccess.mockResolvedValue({ ownerId: 'owner-1', shareMode: 'edit' } as never)
+    await expect(SongService.setShareMode('s1', 'intruder', 'view')).rejects.toMatchObject({
+      statusCode: 403,
+    })
+    expect(mockedRepo.setShareMode).not.toHaveBeenCalled()
+  })
+
+  it('setShareMode updates when the caller is the owner', async () => {
+    mockedRepo.findAccess.mockResolvedValue({ ownerId: 'owner-1', shareMode: 'edit' } as never)
+    mockedRepo.setShareMode.mockResolvedValue({
+      id: 's1',
+      title: 'A',
+      bpm: 120,
+      version: 0,
+      shareMode: 'view',
+      ownerId: 'owner-1',
+      owner: { email: 'o@x.com' },
+      createdAt: new Date('2020-01-01T00:00:00Z'),
+      updatedAt: new Date('2020-01-01T00:00:00Z'),
+    } as never)
+
+    const dto = await SongService.setShareMode('s1', 'owner-1', 'view')
+
+    expect(mockedRepo.setShareMode).toHaveBeenCalledWith('s1', 'view')
+    expect(dto).toMatchObject({ id: 's1', shareMode: 'view' })
+  })
+
   it('getNotes maps repo rows to note DTOs within the requested range', async () => {
     mockedRepo.listNotes.mockResolvedValue([
       {

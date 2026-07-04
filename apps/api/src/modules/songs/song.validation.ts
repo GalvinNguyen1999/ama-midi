@@ -10,3 +10,8 @@ export const createSongSchema = z.object({
 export const songIdParamSchema = z.object({
   params: z.object({ id: z.uuid() }),
 })
+
+export const setShareSchema = z.object({
+  params: z.object({ id: z.uuid() }),
+  body: z.object({ shareMode: z.enum(['edit', 'view']) }),
+})

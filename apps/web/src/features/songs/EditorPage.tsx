@@ -7,6 +7,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import RedoIcon from '@mui/icons-material/Redo'
 import RepeatIcon from '@mui/icons-material/Repeat'
 import StopIcon from '@mui/icons-material/Stop'
+import VisibilityIcon from '@mui/icons-material/Visibility'
 import UndoIcon from '@mui/icons-material/Undo'
 import {
   Avatar,
@@ -20,12 +21,16 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
   IconButton,
+  InputLabel,
   Menu,
   MenuItem,
   Paper,
+  Popover,
   Select,
   Stack,
+  TextField,
   ToggleButton,
   Tooltip,
   Typography,
@@ -44,7 +49,15 @@ import { usePlayback, type Timbre } from '~/features/songs/usePlayback'
 import { useSongRealtime } from '~/features/songs/useSongRealtime'
 import { useWindowedNotes } from '~/features/songs/useWindowedNotes'
 import { useAppDispatch, useAppSelector } from '~/store/hooks'
-import { addNote, applyNoteUpsert, editNote, openSong, removeNote, removeSong } from '~/store/songSlice'
+import {
+  addNote,
+  applyNoteUpsert,
+  editNote,
+  openSong,
+  removeNote,
+  removeSong,
+  setShareMode,
+} from '~/store/songSlice'
 import type { Note } from '~/types/midi'
 import { readUser } from '~/utils/session'
 
@@ -89,10 +102,13 @@ export function EditorPage() {
   const { connected, presence } = useSongRealtime(id, user)
   const { playing, playhead, play, stop } = usePlayback(current?.notes ?? [], { timbre, loop })
   const isOwner = !current?.ownerId || current.ownerId === user?.id
+  const canEdit = isOwner || current?.shareMode === 'edit'
+  const readOnly = Boolean(current) && !canEdit
 
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [perfAnchor, setPerfAnchor] = useState<null | HTMLElement>(null)
+  const [shareAnchor, setShareAnchor] = useState<null | HTMLElement>(null)
   const [seeding, setSeeding] = useState(false)
   const { scrollRef, onScroll, reload } = useWindowedNotes(id)
   const {
@@ -251,6 +267,14 @@ export function EditorPage() {
     }
   }
 
+  const handleSetShare = async (mode: 'edit' | 'view') => {
+    if (!current || current.shareMode === mode) return
+    const res = await dispatch(setShareMode({ id: current.id, shareMode: mode }))
+    if (setShareMode.fulfilled.match(res)) {
+      toast.success(mode === 'view' ? 'Song is now view-only' : 'Anyone with the link can edit')
+    }
+  }
+
   const handleDeleteMany = async (ids: string[]) => {
     if (!current) return
     const targets = current.notes.filter((n) => ids.includes(n.id))
@@ -339,7 +363,16 @@ export function EditorPage() {
                 variant="outlined"
               />
             ) : null}
-            {current ? (
+            {readOnly ? (
+              <Chip
+                size="small"
+                color="warning"
+                variant="outlined"
+                icon={<VisibilityIcon sx={{ fontSize: 14 }} />}
+                label="View only"
+              />
+            ) : null}
+            {current && canEdit ? (
               <>
                 <Tooltip title="Undo (⌘Z)">
                   <span>
@@ -395,9 +428,14 @@ export function EditorPage() {
               </>
             ) : null}
             {current ? (
-              <Tooltip title="Copy a link to invite collaborators to this song">
-                <Button size="small" variant="outlined" startIcon={<LinkIcon />} onClick={copyShareLink}>
-                  Invite
+              <Tooltip title="Share this song">
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<LinkIcon />}
+                  onClick={(e) => setShareAnchor(e.currentTarget)}
+                >
+                  Share
                 </Button>
               </Tooltip>
             ) : null}
@@ -408,7 +446,7 @@ export function EditorPage() {
                 </IconButton>
               </Tooltip>
             ) : null}
-            {current ? (
+            {current && canEdit ? (
               <Tooltip title="Developer tools">
                 <span>
                   <IconButton size="small" onClick={(e) => setPerfAnchor(e.currentTarget)} disabled={seeding}>
@@ -426,6 +464,51 @@ export function EditorPage() {
               <MenuItem onClick={() => handleSeed(1000)}>+ 1,000 notes</MenuItem>
               <MenuItem onClick={() => handleSeed(10000)}>+ 10,000 notes</MenuItem>
             </Menu>
+
+            <Popover
+              open={Boolean(shareAnchor)}
+              anchorEl={shareAnchor}
+              onClose={() => setShareAnchor(null)}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              slotProps={{ paper: { sx: { p: 2, width: 340 } } }}
+            >
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>
+                Share this song
+              </Typography>
+
+              {isOwner ? (
+                <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
+                  <InputLabel id="share-mode-label">Link access</InputLabel>
+                  <Select
+                    labelId="share-mode-label"
+                    label="Link access"
+                    value={current?.shareMode ?? 'edit'}
+                    onChange={(e) => handleSetShare(e.target.value as 'edit' | 'view')}
+                  >
+                    <MenuItem value="edit">Anyone with the link can edit</MenuItem>
+                    <MenuItem value="view">Anyone with the link can view</MenuItem>
+                  </Select>
+                </FormControl>
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                  Anyone with the link can {current?.shareMode === 'view' ? 'view' : 'edit'}.
+                </Typography>
+              )}
+
+              <Stack direction="row" spacing={1}>
+                <TextField
+                  size="small"
+                  fullWidth
+                  value={current ? `${window.location.origin}/songs/${current.id}` : ''}
+                  slotProps={{ input: { readOnly: true } }}
+                  onFocus={(e) => e.target.select()}
+                />
+                <Button variant="contained" startIcon={<LinkIcon />} onClick={copyShareLink}>
+                  Copy
+                </Button>
+              </Stack>
+            </Popover>
           </Stack>
         </Container>
       </Box>
@@ -453,6 +536,7 @@ export function EditorPage() {
                 onDeleteMany={handleDeleteMany}
                 playhead={playing ? playhead : null}
                 loading={notesLoading > 0}
+                readOnly={readOnly}
               />
             </Box>
 

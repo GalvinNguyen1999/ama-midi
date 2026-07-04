@@ -27,6 +27,11 @@ export const deleteSongApi = async (id: string): Promise<void> => {
   await authorizedAxiosInstance.delete(`/songs/${id}`)
 }
 
+export const setShareModeApi = async (id: string, shareMode: 'edit' | 'view'): Promise<Song> => {
+  const { data } = await authorizedAxiosInstance.patch<Song>(`/songs/${id}/share`, { shareMode })
+  return data
+}
+
 export const createNoteApi = async (songId: string, input: NoteInput): Promise<Note> => {
   const { data } = await authorizedAxiosInstance.post<Note>(`/songs/${songId}/notes`, input)
   return data

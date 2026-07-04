@@ -15,6 +15,7 @@ export interface Song {
   title: string
   bpm: number
   version: number
+  shareMode: 'edit' | 'view'
   ownerId: string | null
   ownerEmail: string | null
   createdAt: string

@@ -42,6 +42,24 @@ export const SongService = {
     return events.map(toNoteEventDTO)
   },
 
+  async assertCanEdit(songId: string, userId?: string) {
+    const access = await SongRepo.findAccess(songId)
+    if (!access) throw ApiError.NotFound('Song not found')
+    if (access.shareMode === 'view' && access.ownerId && access.ownerId !== userId) {
+      throw ApiError.Forbidden('This song is shared as view-only')
+    }
+  },
+
+  async setShareMode(id: string, userId: string | undefined, shareMode: 'edit' | 'view') {
+    const access = await SongRepo.findAccess(id)
+    if (!access) throw ApiError.NotFound('Song not found')
+    if (access.ownerId && access.ownerId !== userId) {
+      throw ApiError.Forbidden('Only the owner can change sharing')
+    }
+    const song = await SongRepo.setShareMode(id, shareMode)
+    return toSongDTO(song)
+  },
+
   async remove(id: string, userId?: string) {
     const song = await SongRepo.findById(id)
     if (!song) throw ApiError.NotFound('Song not found')

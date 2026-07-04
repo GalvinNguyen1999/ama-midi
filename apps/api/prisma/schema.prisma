@@ -27,6 +27,7 @@ model Song {
   title     String
   bpm       Int         @default(120)
   version   Int         @default(0)
+  shareMode String      @default("edit")
   ownerId   String?     @db.Uuid
   owner     User?       @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   notes     Note[]

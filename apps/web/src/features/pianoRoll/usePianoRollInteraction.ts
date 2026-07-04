@@ -30,6 +30,7 @@ interface Params {
   onSelectNote: (note: Note) => void
   onMoveNote: (note: Note, track: number, time: number) => void
   onDeleteMany?: (ids: string[]) => void
+  readOnly?: boolean
 }
 
 interface PianoRollInteraction {
@@ -54,6 +55,7 @@ export function usePianoRollInteraction({
   onSelectNote,
   onMoveNote,
   onDeleteMany,
+  readOnly = false,
 }: Params): PianoRollInteraction {
   const [hover, setHover] = useState<Pos | null>(null)
   const [overNote, setOverNote] = useState(false)
@@ -99,6 +101,7 @@ export function usePianoRollInteraction({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (readOnly) return
       if (e.key !== 'Delete' && e.key !== 'Backspace') return
       if (selection.size === 0) return
 
@@ -112,9 +115,10 @@ export function usePianoRollInteraction({
 
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [selection])
+  }, [selection, readOnly])
 
   const onMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+    if (readOnly) return
     const { x, y, pos } = posFromEvent(e)
 
     if (drag) {
@@ -132,6 +136,7 @@ export function usePianoRollInteraction({
   }
 
   const onMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+    if (readOnly) return
     const { x, y } = posFromEvent(e)
     const note = hitTest(x, y)
 
@@ -178,6 +183,7 @@ export function usePianoRollInteraction({
   }
 
   const onClick = (e: MouseEvent<HTMLDivElement>) => {
+    if (readOnly) return
     if (suppressClick.current) {
       suppressClick.current = false
       return
@@ -190,7 +196,7 @@ export function usePianoRollInteraction({
     onCreateAt(pos.track, pos.time)
   }
 
-  const cursor = drag ? 'grabbing' : overNote ? 'grab' : 'crosshair'
+  const cursor = readOnly ? 'default' : drag ? 'grabbing' : overNote ? 'grab' : 'crosshair'
 
   return {
     hover,

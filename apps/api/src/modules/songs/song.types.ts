@@ -5,6 +5,7 @@ export interface SongDTO {
   title: string
   bpm: number
   version: number
+  shareMode: string
   ownerId: string | null
   ownerEmail: string | null
   createdAt: string
@@ -49,6 +50,7 @@ export function toSongDTO(s: SongWithOwner): SongDTO {
     title: s.title,
     bpm: s.bpm,
     version: s.version,
+    shareMode: s.shareMode,
     ownerId: s.ownerId,
     ownerEmail: s.owner?.email ?? null,
     createdAt: s.createdAt.toISOString(),

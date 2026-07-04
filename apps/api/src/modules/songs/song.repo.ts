@@ -36,6 +36,14 @@ export const SongRepo = {
     })
   },
 
+  findAccess(id: string) {
+    return prisma.song.findUnique({ where: { id }, select: { ownerId: true, shareMode: true } })
+  },
+
+  setShareMode(id: string, shareMode: string) {
+    return prisma.song.update({ where: { id }, data: { shareMode }, include: ownerSelect })
+  },
+
   recordCollaborator(songId: string, userId: string) {
     const now = new Date()
     return prisma.songCollaborator.upsert({

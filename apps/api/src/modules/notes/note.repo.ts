@@ -23,6 +23,10 @@ function notePayload(note: Note): Prisma.InputJsonValue {
 const SEED_COLORS = ['#7c3aed', '#ef4444', '#22c55e', '#3b82f6', '#eab308', '#ec4899', '#06b6d4']
 
 export const NoteRepo = {
+  findSongId(id: string) {
+    return prisma.note.findUnique({ where: { id }, select: { songId: true } })
+  },
+
   async bulkSeed(songId: string, count: number): Promise<number> {
     const rows: Prisma.NoteCreateManyInput[] = []
     const seen = new Set<string>()

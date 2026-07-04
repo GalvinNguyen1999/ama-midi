@@ -25,6 +25,7 @@ interface Props {
   onDeleteMany: (ids: string[]) => void
   playhead: number | null
   loading?: boolean
+  readOnly?: boolean
 }
 
 const GRID_WIDTH = TRACK_COUNT * TRACK_WIDTH
@@ -39,6 +40,7 @@ export function PianoRoll({
   onDeleteMany,
   playhead,
   loading,
+  readOnly,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const playheadRef = useRef<HTMLDivElement | null>(null)
@@ -49,6 +51,7 @@ export function PianoRoll({
     onSelectNote,
     onMoveNote,
     onDeleteMany,
+    readOnly,
   })
 
   useNoteCanvas(canvasRef, notes, drag?.note.id, selection)
