@@ -35,6 +35,7 @@ import { seedNotesApi } from '~/apis/midi'
 import { DEFAULT_NOTE_COLOR } from '~/features/pianoRoll/config'
 import { PianoRoll } from '~/features/pianoRoll/PianoRoll'
 import { NoteDialog, type NoteFormValues } from '~/features/songs/NoteDialog'
+import { OnboardingCallout } from '~/features/songs/OnboardingCallout'
 import { useEditorHistory, type NotePatch } from '~/features/songs/useEditorHistory'
 import { usePlayback } from '~/features/songs/usePlayback'
 import { useSongRealtime } from '~/features/songs/useSongRealtime'
@@ -382,6 +383,8 @@ export function EditorPage() {
       </Box>
 
       <Container maxWidth="xl" sx={{ py: 3 }}>
+        {current ? <OnboardingCallout /> : null}
+
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Click the grid to add a note, drag a note to move it, click a note to edit. Time flows top →
           bottom (0–300s), tracks left → right.
