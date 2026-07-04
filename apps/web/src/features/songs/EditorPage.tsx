@@ -144,6 +144,7 @@ export function EditorPage() {
   const [exporting, setExporting] = useState(false)
   const [importing, setImporting] = useState(false)
   const [suggesting, setSuggesting] = useState(false)
+  const [acceptingAll, setAcceptingAll] = useState(false)
   const [suggestions, setSuggestions] = useState<SuggestedNote[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [seeding, setSeeding] = useState(false)
@@ -357,7 +358,7 @@ export function EditorPage() {
   }
 
   const acceptSuggestion = async (s: SuggestedNote) => {
-    if (!current) return
+    if (!current || acceptingAll) return
     const res = await dispatch(
       addNote({ songId: current.id, input: { title: 'Note', track: s.track, time: s.time, color: s.color } }),
     )
@@ -369,22 +370,27 @@ export function EditorPage() {
   }
 
   const acceptAllSuggestions = async () => {
-    if (!current || suggestions.length === 0) return
-    let added = 0
-    for (const s of suggestions) {
-      const res = await dispatch(
-        addNote({
-          songId: current.id,
-          input: { title: 'Note', track: s.track, time: s.time, color: s.color },
-        }),
-      )
-      if (addNote.fulfilled.match(res)) {
-        recordHistory({ kind: 'create', note: res.payload })
-        added += 1
+    if (!current || suggestions.length === 0 || acceptingAll) return
+    setAcceptingAll(true)
+    try {
+      let added = 0
+      for (const s of suggestions) {
+        const res = await dispatch(
+          addNote({
+            songId: current.id,
+            input: { title: 'Note', track: s.track, time: s.time, color: s.color },
+          }),
+        )
+        if (addNote.fulfilled.match(res)) {
+          recordHistory({ kind: 'create', note: res.payload })
+          added += 1
+        }
       }
+      setSuggestions([])
+      if (added > 0) toast.success(`Added ${added} suggested note${added > 1 ? 's' : ''}`)
+    } finally {
+      setAcceptingAll(false)
     }
-    setSuggestions([])
-    if (added > 0) toast.success(`Added ${added} suggested note${added > 1 ? 's' : ''}`)
   }
 
   const handleExport = async () => {
@@ -442,7 +448,6 @@ export function EditorPage() {
         autoClose: 2500,
       })
     } catch {
-      // parse/validation errors are surfaced by the axios interceptor
       toast.dismiss(toastId)
     } finally {
       setImporting(false)
@@ -923,13 +928,27 @@ export function EditorPage() {
                 <Typography variant="caption" color="text.secondary">
                   {suggestions.length} suggested — click a ghost, or
                 </Typography>
-                <Button size="small" variant="contained" onClick={acceptAllSuggestions}>
+                <Button
+                  size="small"
+                  variant="contained"
+                  onClick={acceptAllSuggestions}
+                  loading={acceptingAll}
+                >
                   Accept all
                 </Button>
-                <Button size="small" onClick={handleSuggest} disabled={suggesting}>
+                <Button
+                  size="small"
+                  onClick={handleSuggest}
+                  disabled={suggesting || acceptingAll}
+                >
                   Another
                 </Button>
-                <Button size="small" color="inherit" onClick={() => setSuggestions([])}>
+                <Button
+                  size="small"
+                  color="inherit"
+                  onClick={() => setSuggestions([])}
+                  disabled={acceptingAll}
+                >
                   Dismiss
                 </Button>
               </Paper>
