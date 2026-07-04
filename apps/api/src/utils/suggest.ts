@@ -22,6 +22,7 @@ const round3 = (n: number) => Math.round(n * 1000) / 1000
 
 function sampleWeighted(dist: Map<number, number>, rng: () => number): number | null {
   const entries = [...dist.entries()]
+
   if (entries.length === 0) return null
   const total = entries.reduce((sum, [, count]) => sum + count, 0)
   let r = rng() * total

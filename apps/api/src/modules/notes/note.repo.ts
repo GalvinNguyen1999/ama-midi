@@ -37,8 +37,11 @@ export const NoteRepo = {
       const track = 1 + Math.floor(Math.random() * 8) // 1..8
       const time = Math.round(Math.random() * 300000) / 1000 // 0..300s
       const key = `${track}:${time}`
+
       if (seen.has(key)) continue
+
       seen.add(key)
+
       rows.push({
         songId,
         title: `Seed ${rows.length + 1}`,
@@ -49,12 +52,14 @@ export const NoteRepo = {
     }
 
     let inserted = 0
+
     for (let i = 0; i < rows.length; i += 5000) {
       const batch = await prisma.note.createMany({ data: rows.slice(i, i + 5000), skipDuplicates: true })
       inserted += batch.count
     }
 
     await prisma.song.update({ where: { id: songId }, data: { version: { increment: 1 } } })
+
     return inserted
   },
 
@@ -64,8 +69,11 @@ export const NoteRepo = {
 
     for (const item of input) {
       const key = `${item.track}:${item.time}`
+
       if (seen.has(key)) continue
+
       seen.add(key)
+
       rows.push({
         songId,
         title: `Imported ${rows.length + 1}`,
@@ -76,6 +84,7 @@ export const NoteRepo = {
     }
 
     let inserted = 0
+
     for (let i = 0; i < rows.length; i += 5000) {
       const batch = await prisma.note.createMany({ data: rows.slice(i, i + 5000), skipDuplicates: true })
       inserted += batch.count

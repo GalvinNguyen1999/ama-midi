@@ -69,6 +69,7 @@ export const NoteService = {
     try {
       const found = await NoteRepo.findSongId(id)
       if (!found) throw ApiError.NotFound('Note not found')
+
       await SongService.assertCanEdit(found.songId, userId)
 
       const { note, version } = await NoteRepo.update(id, input, actor)
@@ -87,6 +88,7 @@ export const NoteService = {
     try {
       const found = await NoteRepo.findSongId(id)
       if (!found) throw ApiError.NotFound('Note not found')
+
       await SongService.assertCanEdit(found.songId, userId)
 
       const { note, version } = await NoteRepo.remove(id, actor)

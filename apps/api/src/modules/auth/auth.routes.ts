@@ -18,8 +18,8 @@ const router = Router()
 
 router.post('/register', authLimiter, validateRequest(registerSchema), AuthController.register)
 router.post('/login', authLimiter, validateRequest(loginSchema), AuthController.login)
-router.put('/refresh_token', validateRequest(refreshSchema), AuthController.refresh)
 router.delete('/logout', AuthController.logout)
+router.put('/refresh_token', validateRequest(refreshSchema), AuthController.refresh)
 router.get('/me', isAuthorized, AuthController.me)
 
 router.post('/2fa/setup', isAuthorized, AuthController.setup2fa)

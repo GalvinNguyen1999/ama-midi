@@ -22,13 +22,16 @@ export const SongService = {
 
   async getById(id: string, userId?: string) {
     const song = await SongRepo.findById(id)
+
     if (!song) throw ApiError.NotFound('Song not found')
 
     if (userId && userId !== song.ownerId) {
       const membership = await SongRepo.findCollaborator(id, userId)
+
       if (membership?.status === 'pending') {
         throw ApiError.Forbidden('Accept the invitation to open this song')
       }
+
       await SongRepo.recordCollaborator(id, userId)
     }
 
@@ -42,26 +45,34 @@ export const SongService = {
 
   async suggest(id: string, count?: number) {
     const notes = await SongRepo.listNotes(id)
+
     const input = notes.map((n) => ({ track: n.track, time: n.time.toNumber(), color: n.color }))
+
     return suggestNotes(input, { count })
   },
 
   async getEvents(id: string) {
     const song = await SongRepo.findById(id)
+
     if (!song) throw ApiError.NotFound('Song not found')
+
     const events = await SongRepo.listEvents(id)
+
     return events.map(toNoteEventDTO)
   },
 
   async assertCanEdit(songId: string, userId?: string) {
     const access = await SongRepo.findAccess(songId)
     if (!access) throw ApiError.NotFound('Song not found')
+
     if (access.ownerId && access.ownerId === userId) return
 
     const membership = userId ? await SongRepo.findCollaborator(songId, userId) : null
+
     if (membership?.status === 'pending') {
       throw ApiError.Forbidden('Accept the invitation before editing')
     }
+
     if (access.shareMode === 'view' && access.ownerId) {
       throw ApiError.Forbidden('This song is shared as view-only')
     }
@@ -69,7 +80,9 @@ export const SongService = {
 
   async assertOwner(songId: string, userId?: string) {
     const access = await SongRepo.findAccess(songId)
+
     if (!access) throw ApiError.NotFound('Song not found')
+
     if (access.ownerId && access.ownerId !== userId) {
       throw ApiError.Forbidden('Only the owner can change this song')
     }
@@ -82,11 +95,15 @@ export const SongService = {
     actor?: string,
   ) {
     const access = await SongRepo.findAccess(id)
+
     if (!access) throw ApiError.NotFound('Song not found')
+
     if (access.ownerId && access.ownerId !== userId) {
       throw ApiError.Forbidden('Only the owner can change sharing')
     }
+
     const song = await SongRepo.setShareMode(id, shareMode)
+
     const dto = toSongDTO(song)
 
     emit.songUpdated(
@@ -101,7 +118,9 @@ export const SongService = {
 
   async rename(id: string, userId: string | undefined, title: string, actor?: string) {
     await SongService.assertOwner(id, userId)
+
     const song = await SongRepo.updateTitle(id, title)
+
     const dto = toSongDTO(song)
 
     emit.songUpdated(
@@ -116,7 +135,9 @@ export const SongService = {
 
   async updateBpm(id: string, userId: string | undefined, bpm: number, actor?: string) {
     await SongService.assertCanEdit(id, userId)
+
     const song = await SongRepo.updateBpm(id, bpm)
+
     const dto = toSongDTO(song)
 
     emit.songUpdated(
@@ -131,7 +152,9 @@ export const SongService = {
 
   async invite(id: string, userId: string | undefined, email: string, actor?: string) {
     const access = await SongRepo.findAccess(id)
+
     if (!access) throw ApiError.NotFound('Song not found')
+
     if (access.ownerId && access.ownerId !== userId) {
       throw ApiError.Forbidden('Only the owner can invite collaborators')
     }
@@ -159,9 +182,11 @@ export const SongService = {
 
   async respondToInvite(id: string, userId: string, accept: boolean, actor?: string) {
     const membership = await SongRepo.findCollaborator(id, userId)
+
     if (!membership || membership.status !== 'pending') {
       throw ApiError.NotFound('No pending invitation for this song')
     }
+
     const access = await SongRepo.findAccess(id)
 
     if (accept) {
@@ -177,7 +202,9 @@ export const SongService = {
 
   async remove(id: string, userId?: string, actor?: string) {
     const song = await SongRepo.findById(id)
+
     if (!song) throw ApiError.NotFound('Song not found')
+
     if (song.ownerId && song.ownerId !== userId) {
       throw ApiError.Forbidden('Only the owner can delete this song')
     }
@@ -202,15 +229,19 @@ export const SongService = {
 
   async removeCollaborator(id: string, userId: string | undefined, targetUserId: string) {
     const access = await SongRepo.findAccess(id)
+
     if (!access) throw ApiError.NotFound('Song not found')
+
     if (access.ownerId && access.ownerId !== userId) {
       throw ApiError.Forbidden('Only the owner can remove collaborators')
     }
+
     if (targetUserId === access.ownerId) {
       throw ApiError.BadRequest('The owner cannot be removed')
     }
 
     await SongRepo.removeCollaborator(id, targetUserId)
+
     emit.accessRevoked(targetUserId, id, access.title)
   },
 }

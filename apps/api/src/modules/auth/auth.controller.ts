@@ -26,21 +26,27 @@ function setAuthCookies(res: Response, accessToken: string, refreshToken: string
 export const AuthController = {
   register: asyncHandler(async (req: Request, res: Response) => {
     const result = await AuthService.register(req.body.email, req.body.password)
+
     setAuthCookies(res, result.accessToken, result.refreshToken)
+
     res.status(StatusCodes.CREATED).json(result)
   }),
 
   login: asyncHandler(async (req: Request, res: Response) => {
     const result = await AuthService.login(req.body.email, req.body.password)
+
     if ('accessToken' in result) {
       setAuthCookies(res, result.accessToken, result.refreshToken)
     }
+
     res.json(result)
   }),
 
   refresh: asyncHandler(async (req: Request, res: Response) => {
     const { accessToken } = await AuthService.refresh(req.body.refreshToken)
+
     res.cookie('accessToken', accessToken, cookieOptions())
+
     res.json({ accessToken })
   }),
 
@@ -56,25 +62,31 @@ export const AuthController = {
 
   setup2fa: asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user?.id
+
     if (!userId) {
       res.status(StatusCodes.UNAUTHORIZED).json({ message: 'Unauthorized' })
       return
     }
+
     res.json(await AuthService.setupTwoFactor(userId))
   }),
 
   enable2fa: asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user?.id
+
     if (!userId) {
       res.status(StatusCodes.UNAUTHORIZED).json({ message: 'Unauthorized' })
       return
     }
+
     res.json(await AuthService.enableTwoFactor(userId, req.body.token))
   }),
 
   verify2fa: asyncHandler(async (req: Request, res: Response) => {
     const result = await AuthService.verifyTwoFactor(req.body.userId, req.body.token)
+
     setAuthCookies(res, result.accessToken, result.refreshToken)
+
     res.json(result)
   }),
 }

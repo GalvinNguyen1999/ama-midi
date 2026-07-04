@@ -24,6 +24,7 @@ export const SongController = {
   getNotes: asyncHandler(async (req: Request, res: Response) => {
     const from = Number(req.query.from)
     const to = Number(req.query.to)
+
     res.json(
       await SongService.getNotes(
         stringParam(req, 'songId'),
@@ -70,12 +71,14 @@ export const SongController = {
 
   respondInvite: asyncHandler(async (req: Request, res: Response) => {
     const { accept } = req.body as { accept: boolean }
+
     await SongService.respondToInvite(
       stringParam(req, 'id'),
       req.user?.id ?? '',
       accept,
       req.user?.email,
     )
+
     res.status(StatusCodes.NO_CONTENT).send()
   }),
 
@@ -85,6 +88,7 @@ export const SongController = {
       req.user?.id,
       stringParam(req, 'userId'),
     )
+
     res.status(StatusCodes.NO_CONTENT).send()
   }),
 

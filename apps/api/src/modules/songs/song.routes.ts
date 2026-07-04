@@ -21,21 +21,24 @@ const router = Router()
 
 router.post('/', validateRequest(createSongSchema), SongController.create)
 router.get('/', SongController.list)
+
 router.get('/invitations', SongController.myInvites)
 
 router.get('/:id', validateRequest(songIdParamSchema), SongController.getById)
+router.patch('/:id', validateRequest(renameSongSchema), SongController.rename)
+router.delete('/:id', validateRequest(songIdParamSchema), SongController.remove)
+
 router.get('/:id/events', validateRequest(songIdParamSchema), SongController.getEvents)
 router.get('/:id/suggest', validateRequest(songIdParamSchema), SongController.suggest)
-router.patch('/:id', validateRequest(renameSongSchema), SongController.rename)
 router.patch('/:id/bpm', validateRequest(updateBpmSchema), SongController.updateBpm)
 router.patch('/:id/share', validateRequest(setShareSchema), SongController.setShare)
-router.delete('/:id', validateRequest(songIdParamSchema), SongController.remove)
 
 router.post(
   '/:id/invitations/respond',
   validateRequest(respondInviteSchema),
   SongController.respondInvite,
 )
+
 router.post('/:id/collaborators', validateRequest(inviteSchema), SongController.invite)
 router.delete(
   '/:id/collaborators/:userId',
