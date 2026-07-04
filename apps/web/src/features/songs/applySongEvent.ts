@@ -14,19 +14,24 @@ const actorName = (actor?: string) => (actor ? actor.split('@')[0] : 'Someone')
 export function applySongEvent(dispatch: AppDispatch, event: ServerEvent, selfEmail?: string) {
   const fromOther = 'actor' in event && !!event.actor && event.actor !== selfEmail
 
+  // Coalesce rapid note activity from the same collaborator into one toast
+  // (e.g. a bulk delete would otherwise spawn dozens).
+  const noteToast = (message: string, actor?: string) =>
+    toast.info(message, { toastId: `rt-note-${actor}` })
+
   switch (event.type) {
     case 'note.created':
     case 'note.updated':
       dispatch(applyNoteUpsert(event.note))
       if (fromOther) {
         const verb = event.type === 'note.created' ? 'added' : 'edited'
-        toast.info(`${actorName(event.actor)} ${verb} a note`)
+        noteToast(`${actorName(event.actor)} ${verb} a note`, event.actor)
       }
       break
 
     case 'note.deleted':
       dispatch(applyNoteRemove({ songId: event.songId, noteId: event.noteId }))
-      if (fromOther) toast.info(`${actorName(event.actor)} removed a note`)
+      if (fromOther) noteToast(`${actorName(event.actor)} removed a note`, event.actor)
       break
 
     case 'song.updated':

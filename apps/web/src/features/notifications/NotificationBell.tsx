@@ -15,6 +15,7 @@ import {
   Typography,
 } from '@mui/material'
 import { useEffect, useState } from 'react'
+import { toast } from 'react-toastify'
 
 import { useAppDispatch, useAppSelector } from '~/store/hooks'
 import { fetchInvites, respondInvite } from '~/store/invitesSlice'
@@ -35,7 +36,10 @@ export function NotificationBell() {
 
   const respond = async (songId: string, accept: boolean) => {
     const res = await dispatch(respondInvite({ songId, accept }))
-    if (respondInvite.fulfilled.match(res) && accept) dispatch(fetchSongs())
+    if (respondInvite.fulfilled.match(res)) {
+      if (accept) dispatch(fetchSongs())
+      toast.success(accept ? 'Invitation accepted' : 'Invitation declined')
+    }
   }
 
   return (

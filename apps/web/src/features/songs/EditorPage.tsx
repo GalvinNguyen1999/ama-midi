@@ -228,12 +228,19 @@ export function EditorPage() {
     if (!current) return
     setPerfAnchor(null)
     setSeeding(true)
-    const t0 = performance.now()
+    const toastId = toast.loading(`Seeding ${count.toLocaleString()} notes…`)
     try {
       const { inserted } = await seedNotesApi(current.id, count)
       await dispatch(openSong(current.id))
       reload()
-      toast.success(`Seeded ${inserted.toLocaleString()} notes in ${Math.round(performance.now() - t0)}ms`)
+      toast.update(toastId, {
+        render: `Seeded ${inserted.toLocaleString()} notes`,
+        type: 'success',
+        isLoading: false,
+        autoClose: 2500,
+      })
+    } catch {
+      toast.dismiss(toastId)
     } finally {
       setSeeding(false)
     }
@@ -332,10 +339,16 @@ export function EditorPage() {
   const handleExport = async () => {
     if (!current) return
     setExporting(true)
+    const toastId = toast.loading('Preparing MIDI…')
     try {
       const notes = await getAllNotes(current.id)
       if (notes.length === 0) {
-        toast.info('This song has no notes to export')
+        toast.update(toastId, {
+          render: 'This song has no notes to export',
+          type: 'info',
+          isLoading: false,
+          autoClose: 3000,
+        })
         return
       }
       const bytes = new Uint8Array(notesToMidi(notes, current.bpm))
@@ -346,6 +359,14 @@ export function EditorPage() {
       link.download = `${current.title || 'song'}.mid`
       link.click()
       URL.revokeObjectURL(url)
+      toast.update(toastId, {
+        render: 'MIDI exported',
+        type: 'success',
+        isLoading: false,
+        autoClose: 2000,
+      })
+    } catch {
+      toast.dismiss(toastId)
     } finally {
       setExporting(false)
     }
@@ -357,14 +378,21 @@ export function EditorPage() {
     if (!file || !current) return
 
     setImporting(true)
+    const toastId = toast.loading('Importing MIDI…')
     try {
       const buffer = await file.arrayBuffer()
       const res = await importMidiApi(current.id, buffer)
       await dispatch(openSong(current.id))
       reload()
-      toast.success(`Imported ${res.inserted.toLocaleString()} notes`)
+      toast.update(toastId, {
+        render: `Imported ${res.inserted.toLocaleString()} notes`,
+        type: 'success',
+        isLoading: false,
+        autoClose: 2500,
+      })
     } catch {
       // parse/validation errors are surfaced by the axios interceptor
+      toast.dismiss(toastId)
     } finally {
       setImporting(false)
     }
