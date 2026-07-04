@@ -29,7 +29,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -82,6 +82,7 @@ export function LibraryPage() {
   const [newOpen, setNewOpen] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [creating, setCreating] = useState(false)
+  const creatingRef = useRef(false)
   const [deleteTarget, setDeleteTarget] = useState<Song | null>(null)
   const [deleting, setDeleting] = useState(false)
 
@@ -108,19 +109,25 @@ export function LibraryPage() {
   }, [songs, user])
 
   const handleCreate = async () => {
+    if (creatingRef.current) return
     const title = newTitle.trim()
     if (!title) {
       toast.error('Song title is required')
       return
     }
+    creatingRef.current = true
     setCreating(true)
-    const res = await dispatch(createSong(title))
-    setCreating(false)
-    if (createSong.fulfilled.match(res)) {
-      toast.success(`Song “${title}” created`)
-      setNewTitle('')
-      setNewOpen(false)
-      navigate(`/songs/${res.payload.id}`)
+    try {
+      const res = await dispatch(createSong(title))
+      if (createSong.fulfilled.match(res)) {
+        toast.success(`Song “${title}” created`)
+        setNewTitle('')
+        setNewOpen(false)
+        navigate(`/songs/${res.payload.id}`)
+      }
+    } finally {
+      creatingRef.current = false
+      setCreating(false)
     }
   }
 
@@ -317,7 +324,10 @@ export function LibraryPage() {
             helperText={!newTitle.trim() ? 'Song title is required' : ' '}
             sx={{ mt: 1 }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') handleCreate()
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                handleCreate()
+              }
             }}
           />
         </DialogContent>
