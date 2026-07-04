@@ -45,7 +45,11 @@ export function EditorPage() {
       navigate('/songs')
     },
   })
-  const { playing, playhead, play, stop } = usePlayback(current?.notes ?? [], { timbre, loop })
+  const { playing, playhead, play, stop } = usePlayback(current?.notes ?? [], {
+    timbre,
+    loop,
+    bpm: current?.bpm ?? 120,
+  })
   const isOwner = !current?.ownerId || current.ownerId === user?.id
   const canEdit = isOwner || current?.shareMode === 'edit'
   const readOnly = Boolean(current) && !canEdit

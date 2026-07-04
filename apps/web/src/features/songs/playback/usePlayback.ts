@@ -30,7 +30,10 @@ function scheduleTone(ctx: AudioContext, freq: number, at: number, type: Timbre,
 interface PlaybackOptions {
   timbre?: Timbre
   loop?: boolean
+  bpm?: number
 }
+
+const REFERENCE_BPM = 120
 
 interface PlaybackState {
   playing: boolean
@@ -71,12 +74,17 @@ export function usePlayback(notes: Note[], options: PlaybackOptions = {}): Playb
       ctxRef.current = ctx
       offsetRef.current = typeof from === 'number' && Number.isFinite(from) ? Math.max(0, from) : 0
 
+      const bpm = optionsRef.current.bpm ?? REFERENCE_BPM
+      const scale = REFERENCE_BPM / (bpm > 0 ? bpm : REFERENCE_BPM)
+
       const scheduleCycle = (at0: number) => {
         const timbre = optionsRef.current.timbre ?? 'sine'
         const offset = offsetRef.current
         let last = 0
         for (const n of current) {
-          if (n.time >= offset) scheduleTone(ctx, trackFrequency(n.track), at0 + (n.time - offset), timbre)
+          if (n.time >= offset) {
+            scheduleTone(ctx, trackFrequency(n.track), at0 + (n.time - offset) * scale, timbre)
+          }
           if (n.time > last) last = n.time
         }
         return last
@@ -89,8 +97,8 @@ export function usePlayback(notes: Note[], options: PlaybackOptions = {}): Playb
       setPlayhead(offsetRef.current)
 
       const tick = () => {
-        const elapsed = offsetRef.current + (performance.now() - startRef.current) / 1000
-        if (elapsed >= endRef.current) {
+        const songTime = offsetRef.current + (performance.now() - startRef.current) / 1000 / scale
+        if (songTime >= endRef.current) {
           if (optionsRef.current.loop) {
             scheduleCycle(ctx.currentTime + 0.05)
             startRef.current = performance.now()
@@ -101,7 +109,7 @@ export function usePlayback(notes: Note[], options: PlaybackOptions = {}): Playb
           stop()
           return
         }
-        setPlayhead(elapsed)
+        setPlayhead(songTime)
         rafRef.current = requestAnimationFrame(tick)
       }
       rafRef.current = requestAnimationFrame(tick)

@@ -72,6 +72,14 @@ describe('usePlayback', () => {
     expect(audio.ctx.createOscillator).toHaveBeenCalledTimes(2)
   })
 
+  it('scales note scheduling by BPM relative to the 120 reference', () => {
+    // note at t=10; at 60 BPM (half speed) it should schedule at 0.08 + 10 * (120/60) = 20.08
+    const { result } = renderHook(() => usePlayback([makeNote('a', 1, 10)], { bpm: 60 }))
+    act(() => result.current.play())
+    const at = audio.osc.start.mock.calls[0][0] as number
+    expect(at).toBeCloseTo(20.08, 5)
+  })
+
   it('stop() closes the audio context and resets state', () => {
     const { result } = renderHook(() => usePlayback([makeNote('a', 1, 0)]))
     act(() => result.current.play())
