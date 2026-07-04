@@ -14,6 +14,7 @@ import {
   TRACK_WIDTH,
   timeToY,
   trackCenterX,
+  yToTime,
 } from './config'
 import { useNoteCanvas } from './useNoteCanvas'
 import { usePianoRollInteraction } from './usePianoRollInteraction'
@@ -26,6 +27,7 @@ interface Props {
   onMoveMany?: (moves: { note: Note; track: number; time: number }[]) => void
   onDeleteMany: (ids: string[]) => void
   playhead: number | null
+  onSeek?: (time: number) => void
   loading?: boolean
   readOnly?: boolean
   suggestions?: { track: number; time: number; color: string }[]
@@ -44,6 +46,7 @@ export function PianoRoll({
   onMoveMany,
   onDeleteMany,
   playhead,
+  onSeek,
   loading,
   readOnly,
   suggestions,
@@ -96,17 +99,34 @@ export function PianoRoll({
       </Box>
 
       <Box sx={{ display: 'flex' }}>
-        <Box sx={{ position: 'relative', width: RULER_WIDTH, height: GRID_HEIGHT }}>
-          {timeLabels.map((t) => (
-            <Typography
-              key={t}
-              variant="caption"
-              sx={{ position: 'absolute', right: 6, top: timeToY(t) - 8, color: 'text.disabled' }}
-            >
-              {t}s
-            </Typography>
-          ))}
-        </Box>
+        <Tooltip title={onSeek ? 'Click to move the playhead' : ''} followCursor>
+          <Box
+            onClick={
+              onSeek
+                ? (e) => {
+                    const rect = e.currentTarget.getBoundingClientRect()
+                    onSeek(yToTime(e.clientY - rect.top))
+                  }
+                : undefined
+            }
+            sx={{
+              position: 'relative',
+              width: RULER_WIDTH,
+              height: GRID_HEIGHT,
+              cursor: onSeek ? 'pointer' : 'default',
+            }}
+          >
+            {timeLabels.map((t) => (
+              <Typography
+                key={t}
+                variant="caption"
+                sx={{ position: 'absolute', right: 6, top: timeToY(t) - 8, color: 'text.disabled' }}
+              >
+                {t}s
+              </Typography>
+            ))}
+          </Box>
+        </Tooltip>
 
         <Box
           role="grid"

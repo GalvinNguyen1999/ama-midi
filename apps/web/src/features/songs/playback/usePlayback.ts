@@ -35,7 +35,7 @@ interface PlaybackOptions {
 interface PlaybackState {
   playing: boolean
   playhead: number
-  play: () => void
+  play: (from?: number) => void
   stop: () => void
 }
 
@@ -46,6 +46,7 @@ export function usePlayback(notes: Note[], options: PlaybackOptions = {}): Playb
   const rafRef = useRef<number | null>(null)
   const startRef = useRef(0)
   const endRef = useRef(0)
+  const offsetRef = useRef(0)
   const notesRef = useRef(notes)
   notesRef.current = notes
   const optionsRef = useRef(options)
@@ -60,48 +61,53 @@ export function usePlayback(notes: Note[], options: PlaybackOptions = {}): Playb
     setPlayhead(0)
   }, [])
 
-  const play = useCallback(() => {
-    const current = notesRef.current
-    if (current.length === 0) return
+  const play = useCallback(
+    (from = 0) => {
+      const current = notesRef.current
+      if (current.length === 0) return
 
-    ctxRef.current?.close().catch(() => undefined)
-    const ctx = new AudioContext()
-    ctxRef.current = ctx
+      ctxRef.current?.close().catch(() => undefined)
+      const ctx = new AudioContext()
+      ctxRef.current = ctx
+      offsetRef.current = Math.max(0, from)
 
-    const scheduleCycle = (at0: number) => {
-      const timbre = optionsRef.current.timbre ?? 'sine'
-      let last = 0
-      for (const n of current) {
-        scheduleTone(ctx, trackFrequency(n.track), at0 + n.time, timbre)
-        if (n.time > last) last = n.time
+      const scheduleCycle = (at0: number) => {
+        const timbre = optionsRef.current.timbre ?? 'sine'
+        const offset = offsetRef.current
+        let last = 0
+        for (const n of current) {
+          if (n.time >= offset) scheduleTone(ctx, trackFrequency(n.track), at0 + (n.time - offset), timbre)
+          if (n.time > last) last = n.time
+        }
+        return last
       }
-      return last
-    }
 
-    const last = scheduleCycle(ctx.currentTime + 0.08)
-    startRef.current = performance.now()
-    endRef.current = Math.min(last + 0.6, TIME_MAX + 0.6)
-    setPlaying(true)
-    setPlayhead(0)
+      const last = scheduleCycle(ctx.currentTime + 0.08)
+      startRef.current = performance.now()
+      endRef.current = Math.min(last + 0.6, TIME_MAX + 0.6)
+      setPlaying(true)
+      setPlayhead(offsetRef.current)
 
-    const tick = () => {
-      const elapsed = (performance.now() - startRef.current) / 1000
-      if (elapsed >= endRef.current) {
-        if (optionsRef.current.loop) {
-          scheduleCycle(ctx.currentTime + 0.05)
-          startRef.current = performance.now()
-          setPlayhead(0)
-          rafRef.current = requestAnimationFrame(tick)
+      const tick = () => {
+        const elapsed = offsetRef.current + (performance.now() - startRef.current) / 1000
+        if (elapsed >= endRef.current) {
+          if (optionsRef.current.loop) {
+            scheduleCycle(ctx.currentTime + 0.05)
+            startRef.current = performance.now()
+            setPlayhead(offsetRef.current)
+            rafRef.current = requestAnimationFrame(tick)
+            return
+          }
+          stop()
           return
         }
-        stop()
-        return
+        setPlayhead(elapsed)
+        rafRef.current = requestAnimationFrame(tick)
       }
-      setPlayhead(elapsed)
       rafRef.current = requestAnimationFrame(tick)
-    }
-    rafRef.current = requestAnimationFrame(tick)
-  }, [stop])
+    },
+    [stop],
+  )
 
   useEffect(() => stop, [stop])
 

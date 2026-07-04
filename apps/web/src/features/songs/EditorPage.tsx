@@ -160,6 +160,7 @@ export function EditorPage() {
                 onMoveMany={notes.moveMany}
                 onDeleteMany={notes.deleteMany}
                 playhead={playing ? playhead : null}
+                onSeek={(t) => play(t)}
                 loading={notesLoading > 0}
                 readOnly={readOnly}
                 suggestions={canEdit ? suggestions : []}

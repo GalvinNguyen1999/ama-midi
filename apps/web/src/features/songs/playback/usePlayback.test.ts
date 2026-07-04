@@ -63,6 +63,15 @@ describe('usePlayback', () => {
     expect(result.current.playing).toBe(true)
   })
 
+  it('play(from) starts the playhead at the offset and skips earlier notes', () => {
+    const notes = [makeNote('a', 1, 0), makeNote('b', 4, 5), makeNote('c', 2, 10)]
+    const { result } = renderHook(() => usePlayback(notes))
+    act(() => result.current.play(5))
+    expect(result.current.playhead).toBe(5)
+    // only notes at time >= 5 get an oscillator (b and c)
+    expect(audio.ctx.createOscillator).toHaveBeenCalledTimes(2)
+  })
+
   it('stop() closes the audio context and resets state', () => {
     const { result } = renderHook(() => usePlayback([makeNote('a', 1, 0)]))
     act(() => result.current.play())
