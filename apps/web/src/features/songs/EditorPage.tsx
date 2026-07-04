@@ -623,7 +623,8 @@ export function EditorPage() {
                     <Button
                       variant="outlined"
                       onClick={handleInvite}
-                      disabled={inviting || !inviteEmail.trim()}
+                      loading={inviting}
+                      disabled={!inviteEmail.trim()}
                     >
                       Invite
                     </Button>
@@ -740,8 +741,8 @@ export function EditorPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteOpen(false)}>Cancel</Button>
-          <Button color="error" variant="contained" onClick={handleDeleteSong} disabled={deleting}>
-            {deleting ? 'Deleting…' : 'Delete'}
+          <Button color="error" variant="contained" onClick={handleDeleteSong} loading={deleting}>
+            Delete
           </Button>
         </DialogActions>
       </Dialog>

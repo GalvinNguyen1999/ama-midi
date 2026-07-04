@@ -35,6 +35,7 @@ import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
+import { NoteFingerprint } from '~/features/library/NoteFingerprint'
 import { useAppDispatch, useAppSelector } from '~/store/hooks'
 import { createSong, fetchSongs, removeSong } from '~/store/songSlice'
 import type { Song } from '~/types/midi'
@@ -56,7 +57,7 @@ interface StatProps {
 
 function StatCard({ icon, label, value }: StatProps) {
   return (
-    <Card variant="outlined" sx={{ borderRadius: 3 }}>
+    <Card>
       <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <Avatar sx={{ bgcolor: 'action.hover', color: 'primary.main' }}>{icon}</Avatar>
         <Box>
@@ -258,15 +259,14 @@ export function LibraryPage() {
             return (
               <Card
                 key={song.id}
-                variant="outlined"
                 sx={{
-                  borderRadius: 3,
+                  overflow: 'hidden',
                   transition: 'transform 0.12s, border-color 0.12s',
                   '&:hover': { transform: 'translateY(-3px)', borderColor: accent },
                 }}
               >
                 <CardActionArea onClick={() => navigate(`/songs/${song.id}`)}>
-                  <Box sx={{ height: 6, bgcolor: accent }} />
+                  <NoteFingerprint id={song.id} noteCount={song.noteCount} accent={accent} />
                   <CardContent>
                     <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
                       <Avatar sx={{ bgcolor: accent, width: 40, height: 40 }}>
@@ -361,8 +361,13 @@ export function LibraryPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setNewOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleCreate} disabled={creating || !newTitle.trim()}>
-            {creating ? 'Creating…' : 'Create'}
+          <Button
+            variant="contained"
+            onClick={handleCreate}
+            loading={creating}
+            disabled={!newTitle.trim()}
+          >
+            Create
           </Button>
         </DialogActions>
       </Dialog>
@@ -376,8 +381,8 @@ export function LibraryPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteTarget(null)}>Cancel</Button>
-          <Button color="error" variant="contained" onClick={handleDelete} disabled={deleting}>
-            {deleting ? 'Deleting…' : 'Delete'}
+          <Button color="error" variant="contained" onClick={handleDelete} loading={deleting}>
+            Delete
           </Button>
         </DialogActions>
       </Dialog>

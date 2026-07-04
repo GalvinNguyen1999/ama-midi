@@ -8,7 +8,6 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CircularProgress,
   Container,
   Stack,
   TextField,
@@ -65,7 +64,7 @@ export function SettingsPage() {
         Settings
       </Typography>
 
-      <Card variant="outlined" sx={{ borderRadius: 3, mb: 3 }}>
+      <Card sx={{ mb: 3 }}>
         <CardHeader title="Profile" titleTypographyProps={{ variant: 'h6' }} />
         <CardContent sx={{ pt: 0 }}>
           <Stack direction="row" spacing={2} alignItems="center">
@@ -82,7 +81,7 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card variant="outlined" sx={{ borderRadius: 3, mb: 3 }}>
+      <Card sx={{ mb: 3 }}>
         <CardHeader
           avatar={<SecurityIcon color="primary" />}
           title="Two-factor authentication"
@@ -108,16 +107,22 @@ export function SettingsPage() {
                 sx={{ input: { letterSpacing: '0.4em', textAlign: 'center', fontFamily: 'monospace' } }}
                 fullWidth
               />
-              <Button variant="contained" fullWidth onClick={confirmEnable} disabled={busy || code.length !== 6}>
-                {busy ? 'Enabling…' : 'Confirm & enable'}
+              <Button
+                variant="contained"
+                fullWidth
+                onClick={confirmEnable}
+                loading={busy}
+                disabled={code.length !== 6}
+              >
+                Confirm &amp; enable
               </Button>
             </Stack>
           ) : (
             <Button
               variant="outlined"
-              startIcon={starting ? <CircularProgress size={16} /> : <SecurityIcon />}
+              startIcon={<SecurityIcon />}
               onClick={startSetup}
-              disabled={starting}
+              loading={starting}
             >
               Set up two-factor
             </Button>
@@ -125,7 +130,7 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card variant="outlined" sx={{ borderRadius: 3 }}>
+      <Card>
         <CardHeader title="Account" titleTypographyProps={{ variant: 'h6' }} />
         <CardContent sx={{ pt: 0 }}>
           <Button color="error" variant="outlined" startIcon={<LogoutIcon />} onClick={logout}>

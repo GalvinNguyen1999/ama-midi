@@ -7,6 +7,7 @@ import { toast } from 'react-toastify'
 
 import { loginApi, storeSession, verify2faApi } from '~/apis/auth'
 import { AuthLayout } from '~/features/auth/AuthLayout'
+import { PasswordField } from '~/features/auth/PasswordField'
 import { loginSchema, type LoginValues } from '~/features/auth/schemas'
 
 const OTP_INPUT_SX = {
@@ -88,16 +89,15 @@ export function LoginPage() {
             helperText={errors.email?.message}
             {...register('email')}
           />
-          <TextField
+          <PasswordField
             label="Password"
-            type="password"
             fullWidth
             error={Boolean(errors.password)}
             helperText={errors.password?.message}
             {...register('password')}
           />
-          <Button type="submit" variant="contained" size="large" disabled={busy}>
-            {busy ? 'Signing in…' : 'Login'}
+          <Button type="submit" variant="contained" size="large" loading={busy}>
+            Login
           </Button>
           <Typography variant="body2" color="text.secondary">
             No account? <MuiLink component={Link} to="/register">Create one</MuiLink>

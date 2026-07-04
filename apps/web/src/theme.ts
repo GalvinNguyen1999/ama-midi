@@ -23,5 +23,11 @@ export const theme = createTheme({
       defaultProps: { elevation: 0, color: 'transparent' },
       styleOverrides: { root: { backgroundImage: 'none', borderBottom: '1px solid rgba(255,255,255,0.09)' } },
     },
+    MuiCard: {
+      defaultProps: { variant: 'outlined' },
+      styleOverrides: { root: { borderRadius: 16 } },
+    },
+    MuiChip: { styleOverrides: { root: { fontWeight: 600 } } },
+    MuiTooltip: { defaultProps: { arrow: true } },
   },
 })

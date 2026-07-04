@@ -7,6 +7,7 @@ import { toast } from 'react-toastify'
 
 import { registerApi, storeSession } from '~/apis/auth'
 import { AuthLayout } from '~/features/auth/AuthLayout'
+import { PasswordField } from '~/features/auth/PasswordField'
 import { registerSchema, type RegisterValues } from '~/features/auth/schemas'
 
 export function RegisterPage() {
@@ -42,16 +43,15 @@ export function RegisterPage() {
             helperText={errors.email?.message}
             {...register('email')}
           />
-          <TextField
+          <PasswordField
             label="Password"
-            type="password"
             fullWidth
             error={Boolean(errors.password)}
             helperText={errors.password?.message ?? 'At least 6 characters'}
             {...register('password')}
           />
-          <Button type="submit" variant="contained" size="large" disabled={busy}>
-            {busy ? 'Creating…' : 'Create account'}
+          <Button type="submit" variant="contained" size="large" loading={busy}>
+            Create account
           </Button>
           <Typography variant="body2" color="text.secondary">
             Have an account? <MuiLink component={Link} to="/login">Login</MuiLink>
