@@ -43,12 +43,16 @@ function upsertNote(state: SongState, note: Note) {
     state.current.notes[idx] = note
   } else {
     state.current.notes.push(note)
+    state.current.noteCount += 1
   }
 }
 
 function removeNoteFromState(state: SongState, songId: string, noteId: string) {
   if (!state.current || state.current.id !== songId) return
+
+  const before = state.current.notes.length
   state.current.notes = state.current.notes.filter((n) => n.id !== noteId)
+  if (state.current.notes.length < before) state.current.noteCount -= 1
 }
 
 export const fetchSongs = createAsyncThunk('song/fetchSongs', () => listSongs())
