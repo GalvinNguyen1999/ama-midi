@@ -163,17 +163,40 @@ describe('SongService', () => {
     })
   })
 
-  it('invite adds an existing user as a collaborator', async () => {
+  it('invite adds an existing user as a pending collaborator', async () => {
     mockedRepo.findAccess.mockResolvedValue({ ownerId: 'owner-1', shareMode: 'edit' } as never)
     mockedAuth.findByEmail.mockResolvedValue({ id: 'u2', email: 'b@x.com' } as never)
-    mockedRepo.recordCollaborator.mockResolvedValue({
+    mockedRepo.invitePending.mockResolvedValue({
       lastSeen: new Date('2020-01-01T00:00:00Z'),
     } as never)
 
     const dto = await SongService.invite('s1', 'owner-1', 'b@x.com')
 
-    expect(mockedRepo.recordCollaborator).toHaveBeenCalledWith('s1', 'u2')
-    expect(dto).toMatchObject({ email: 'b@x.com' })
+    expect(mockedRepo.invitePending).toHaveBeenCalledWith('s1', 'u2')
+    expect(dto).toMatchObject({ email: 'b@x.com', status: 'pending' })
+  })
+
+  it('respondToInvite accepts a pending invitation', async () => {
+    mockedRepo.findCollaborator.mockResolvedValue({ status: 'pending' } as never)
+    mockedRepo.findAccess.mockResolvedValue({ ownerId: 'owner-1', title: 'Song' } as never)
+
+    await SongService.respondToInvite('s1', 'u2', true)
+    expect(mockedRepo.setCollaboratorStatus).toHaveBeenCalledWith('s1', 'u2', 'accepted')
+  })
+
+  it('respondToInvite declines by removing the row', async () => {
+    mockedRepo.findCollaborator.mockResolvedValue({ status: 'pending' } as never)
+    mockedRepo.findAccess.mockResolvedValue({ ownerId: 'owner-1', title: 'Song' } as never)
+
+    await SongService.respondToInvite('s1', 'u2', false)
+    expect(mockedRepo.removeCollaborator).toHaveBeenCalledWith('s1', 'u2')
+  })
+
+  it('respondToInvite 404s when there is no pending invite', async () => {
+    mockedRepo.findCollaborator.mockResolvedValue(null as never)
+    await expect(SongService.respondToInvite('s1', 'u2', true)).rejects.toMatchObject({
+      statusCode: 404,
+    })
   })
 
   it('getNotes maps repo rows to note DTOs within the requested range', async () => {

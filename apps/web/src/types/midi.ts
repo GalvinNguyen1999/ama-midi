@@ -30,7 +30,14 @@ export interface PresenceUser {
 export interface Collaborator {
   userId: string
   email: string
+  status: 'pending' | 'accepted'
   lastSeen: string
+}
+
+export interface PendingInvite {
+  songId: string
+  title: string
+  ownerEmail: string | null
 }
 
 export interface SongDetail extends Song {

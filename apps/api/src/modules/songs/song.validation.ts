@@ -29,3 +29,8 @@ export const inviteSchema = z.object({
 export const removeCollaboratorSchema = z.object({
   params: z.object({ id: z.uuid(), userId: z.uuid() }),
 })
+
+export const respondInviteSchema = z.object({
+  params: z.object({ id: z.uuid() }),
+  body: z.object({ accept: z.boolean() }),
+})

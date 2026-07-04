@@ -45,6 +45,7 @@ model SongCollaborator {
   userId    String   @db.Uuid
   song      Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status    String   @default("accepted")
   firstSeen DateTime @default(now())
   lastSeen  DateTime @default(now())
 

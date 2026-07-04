@@ -31,3 +31,7 @@ export const updateNoteSchema = z.object({
 export const noteIdParamSchema = z.object({
   params: z.object({ id: z.uuid() }),
 })
+
+export const importNotesSchema = z.object({
+  params: z.object({ songId: z.uuid() }),
+})

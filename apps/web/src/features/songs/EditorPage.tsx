@@ -2,6 +2,8 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import CircleIcon from '@mui/icons-material/Circle'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import EditIcon from '@mui/icons-material/Edit'
+import FileDownloadIcon from '@mui/icons-material/FileDownload'
+import FileUploadIcon from '@mui/icons-material/FileUpload'
 import HistoryIcon from '@mui/icons-material/History'
 import LinkIcon from '@mui/icons-material/Link'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
@@ -37,14 +39,22 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { ChangeEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
-import { inviteCollaboratorApi, removeCollaboratorApi, seedNotesApi } from '~/apis/midi'
+import {
+  getAllNotes,
+  importMidiApi,
+  inviteCollaboratorApi,
+  removeCollaboratorApi,
+  seedNotesApi,
+} from '~/apis/midi'
 import { DEFAULT_NOTE_COLOR } from '~/features/pianoRoll/config'
 import { PianoRoll } from '~/features/pianoRoll/PianoRoll'
 import { HistoryDrawer } from '~/features/songs/HistoryDrawer'
+import { notesToMidi } from '~/features/songs/midi'
 import { NoteDialog, type NoteFormValues } from '~/features/songs/NoteDialog'
 import { OnboardingCallout } from '~/features/songs/OnboardingCallout'
 import { useEditorHistory, type NotePatch } from '~/features/songs/useEditorHistory'
@@ -55,6 +65,7 @@ import { useAppDispatch, useAppSelector } from '~/store/hooks'
 import {
   addNote,
   applyCollaboratorRemoved,
+  applyCollaboratorUpsert,
   applyNoteUpsert,
   editNote,
   openSong,
@@ -127,6 +138,9 @@ export function EditorPage() {
   const [historyOpen, setHistoryOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviting, setInviting] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [seeding, setSeeding] = useState(false)
   const { scrollRef, onScroll, reload } = useWindowedNotes(id)
   const {
@@ -305,12 +319,54 @@ export function EditorPage() {
     setInviting(true)
     try {
       const collaborator = await inviteCollaboratorApi(current.id, email)
+      dispatch(applyCollaboratorUpsert({ songId: current.id, collaborator }))
       toast.success(`Invited ${collaborator.email}`)
       setInviteEmail('')
     } catch {
       // the axios interceptor surfaces the error message
     } finally {
       setInviting(false)
+    }
+  }
+
+  const handleExport = async () => {
+    if (!current) return
+    setExporting(true)
+    try {
+      const notes = await getAllNotes(current.id)
+      if (notes.length === 0) {
+        toast.info('This song has no notes to export')
+        return
+      }
+      const bytes = new Uint8Array(notesToMidi(notes, current.bpm))
+      const blob = new Blob([bytes], { type: 'audio/midi' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${current.title || 'song'}.mid`
+      link.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleImportFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !current) return
+
+    setImporting(true)
+    try {
+      const buffer = await file.arrayBuffer()
+      const res = await importMidiApi(current.id, buffer)
+      await dispatch(openSong(current.id))
+      reload()
+      toast.success(`Imported ${res.inserted.toLocaleString()} notes`)
+    } catch {
+      // parse/validation errors are surfaced by the axios interceptor
+    } finally {
+      setImporting(false)
     }
   }
 
@@ -522,6 +578,35 @@ export function EditorPage() {
               </Tooltip>
             ) : null}
             {current ? (
+              <Tooltip title="Export as MIDI (.mid)">
+                <span>
+                  <IconButton size="small" onClick={handleExport} disabled={exporting}>
+                    <FileDownloadIcon fontSize="small" />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            ) : null}
+            {current && canEdit ? (
+              <Tooltip title="Import a MIDI file (.mid)">
+                <span>
+                  <IconButton
+                    size="small"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={importing}
+                  >
+                    <FileUploadIcon fontSize="small" />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            ) : null}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".mid,.midi,audio/midi,audio/x-midi"
+              style={{ display: 'none' }}
+              onChange={handleImportFile}
+            />
+            {current ? (
               <Tooltip title="Activity history">
                 <IconButton size="small" onClick={() => setHistoryOpen(true)}>
                   <HistoryIcon fontSize="small" />
@@ -648,6 +733,9 @@ export function EditorPage() {
                             <Typography variant="body2" noWrap sx={{ flexGrow: 1, minWidth: 0 }}>
                               {c.email}
                             </Typography>
+                            {c.status === 'pending' ? (
+                              <Chip size="small" variant="outlined" color="warning" label="Pending" />
+                            ) : null}
                             <Tooltip title="Remove access">
                               <IconButton
                                 size="small"

@@ -4,8 +4,8 @@ import { toast } from 'react-toastify'
 
 import type { ServerEvent } from '~/realtime/events'
 import { useAppDispatch } from '~/store/hooks'
-import { addNotification } from '~/store/notificationsSlice'
-import { applySongRemoved, fetchSongs } from '~/store/songSlice'
+import { fetchInvites } from '~/store/invitesSlice'
+import { applyCollaboratorRemoved, applyCollaboratorUpsert, applySongRemoved } from '~/store/songSlice'
 import { WS_URL } from '~/utils/env'
 
 export function useUserNotifications(userId: string | undefined) {
@@ -31,11 +31,26 @@ export function useUserNotifications(userId: string | undefined) {
 
       if (event.type === 'invited') {
         const by = event.by ? event.by.split('@')[0] : 'Someone'
-        dispatch(addNotification({ songId: event.songId, title: event.title, by: event.by }))
-        toast.info(`${by} invited you to “${event.title}”`, {
-          onClick: () => navigate(`/songs/${event.songId}`),
-        })
-        dispatch(fetchSongs())
+        toast.info(`${by} invited you to “${event.title}”`)
+        dispatch(fetchInvites())
+      } else if (event.type === 'invite.responded') {
+        const by = event.by ? event.by.split('@')[0] : 'Someone'
+        if (event.accepted) {
+          dispatch(
+            applyCollaboratorUpsert({
+              songId: event.songId,
+              collaborator: {
+                userId: event.userId,
+                email: event.by,
+                status: 'accepted',
+                lastSeen: new Date().toISOString(),
+              },
+            }),
+          )
+        } else {
+          dispatch(applyCollaboratorRemoved({ songId: event.songId, userId: event.userId }))
+        }
+        toast.info(`${by} ${event.accepted ? 'accepted' : 'declined'} “${event.title}”`)
       } else if (event.type === 'song.removed') {
         dispatch(applySongRemoved({ songId: event.songId }))
         if (pathRef.current === `/songs/${event.songId}`) navigate('/songs')

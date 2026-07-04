@@ -54,6 +54,21 @@ export const SongController = {
     res.json(await SongService.invite(stringParam(req, 'id'), req.user?.id, email, req.user?.email))
   }),
 
+  myInvites: asyncHandler(async (req: Request, res: Response) => {
+    res.json(await SongService.listMyInvites(req.user?.id ?? ''))
+  }),
+
+  respondInvite: asyncHandler(async (req: Request, res: Response) => {
+    const { accept } = req.body as { accept: boolean }
+    await SongService.respondToInvite(
+      stringParam(req, 'id'),
+      req.user?.id ?? '',
+      accept,
+      req.user?.email,
+    )
+    res.status(StatusCodes.NO_CONTENT).send()
+  }),
+
   removeCollaborator: asyncHandler(async (req: Request, res: Response) => {
     await SongService.removeCollaborator(
       stringParam(req, 'id'),

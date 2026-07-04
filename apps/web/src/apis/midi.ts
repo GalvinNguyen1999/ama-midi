@@ -4,6 +4,7 @@ import type {
   NoteEvent,
   NoteInput,
   NoteUpdate,
+  PendingInvite,
   Song,
   SongDetail,
 } from '~/types/midi'
@@ -45,6 +46,15 @@ export const renameSongApi = async (id: string, title: string): Promise<Song> =>
   return data
 }
 
+export const getMyInvitesApi = async (): Promise<PendingInvite[]> => {
+  const { data } = await authorizedAxiosInstance.get<PendingInvite[]>('/songs/invitations')
+  return data
+}
+
+export const respondInviteApi = async (songId: string, accept: boolean): Promise<void> => {
+  await authorizedAxiosInstance.post(`/songs/${songId}/invitations/respond`, { accept })
+}
+
 export const inviteCollaboratorApi = async (id: string, email: string): Promise<Collaborator> => {
   const { data } = await authorizedAxiosInstance.post<Collaborator>(`/songs/${id}/collaborators`, {
     email,
@@ -73,6 +83,23 @@ export const updateNoteApi = async (id: string, input: NoteUpdate): Promise<Note
 
 export const deleteNoteApi = async (id: string): Promise<void> => {
   await authorizedAxiosInstance.delete(`/notes/${id}`)
+}
+
+export const getAllNotes = async (songId: string): Promise<Note[]> => {
+  const { data } = await authorizedAxiosInstance.get<Note[]>(`/songs/${songId}/notes`)
+  return data
+}
+
+export const importMidiApi = async (
+  songId: string,
+  file: ArrayBuffer,
+): Promise<{ inserted: number }> => {
+  const { data } = await authorizedAxiosInstance.post<{ inserted: number }>(
+    `/songs/${songId}/notes/import`,
+    file,
+    { headers: { 'Content-Type': 'application/octet-stream' } },
+  )
+  return data
 }
 
 export const seedNotesApi = async (songId: string, count: number): Promise<{ inserted: number }> => {

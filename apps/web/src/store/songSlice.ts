@@ -12,7 +12,15 @@ import {
   setShareModeApi,
   updateNoteApi,
 } from '~/apis/midi'
-import type { Note, NoteInput, NoteUpdate, Song, SongDetail, SongWithNotes } from '~/types/midi'
+import type {
+  Collaborator,
+  Note,
+  NoteInput,
+  NoteUpdate,
+  Song,
+  SongDetail,
+  SongWithNotes,
+} from '~/types/midi'
 
 export const CHUNK_SECONDS = 30
 
@@ -151,6 +159,20 @@ const songSlice = createSlice({
       const row = state.songs.find((s) => s.id === songId)
       if (row) row.collaborators = row.collaborators.filter((c) => c.userId !== userId)
     },
+    applyCollaboratorUpsert(
+      state,
+      action: PayloadAction<{ songId: string; collaborator: Collaborator }>,
+    ) {
+      const { songId, collaborator } = action.payload
+      const upsert = (list: Collaborator[]) => {
+        const idx = list.findIndex((c) => c.userId === collaborator.userId)
+        if (idx >= 0) list[idx] = collaborator
+        else list.push(collaborator)
+      }
+      if (state.current?.id === songId) upsert(state.current.collaborators)
+      const row = state.songs.find((s) => s.id === songId)
+      if (row) upsert(row.collaborators)
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -224,5 +246,6 @@ export const {
   applySongUpdate,
   applySongRemoved,
   applyCollaboratorRemoved,
+  applyCollaboratorUpsert,
 } = songSlice.actions
 export default songSlice.reducer

@@ -9,7 +9,12 @@ export const SongRepo = {
 
   list(userId: string) {
     return prisma.song.findMany({
-      where: { OR: [{ ownerId: userId }, { collaborators: { some: { userId } } }] },
+      where: {
+        OR: [
+          { ownerId: userId },
+          { collaborators: { some: { userId, status: 'accepted' } } },
+        ],
+      },
       orderBy: { updatedAt: 'desc' },
       include: {
         ...ownerSelect,
@@ -78,8 +83,36 @@ export const SongRepo = {
     const now = new Date()
     return prisma.songCollaborator.upsert({
       where: { songId_userId: { songId, userId } },
-      create: { songId, userId, lastSeen: now },
+      create: { songId, userId, status: 'accepted', lastSeen: now },
       update: { lastSeen: now },
+    })
+  },
+
+  invitePending(songId: string, userId: string) {
+    const now = new Date()
+    return prisma.songCollaborator.upsert({
+      where: { songId_userId: { songId, userId } },
+      create: { songId, userId, status: 'pending', lastSeen: now },
+      update: {},
+    })
+  },
+
+  findCollaborator(songId: string, userId: string) {
+    return prisma.songCollaborator.findUnique({
+      where: { songId_userId: { songId, userId } },
+      select: { status: true },
+    })
+  },
+
+  setCollaboratorStatus(songId: string, userId: string, status: string) {
+    return prisma.songCollaborator.updateMany({ where: { songId, userId }, data: { status } })
+  },
+
+  listPendingInvites(userId: string) {
+    return prisma.songCollaborator.findMany({
+      where: { userId, status: 'pending' },
+      orderBy: { lastSeen: 'desc' },
+      include: { song: { select: { id: true, title: true, owner: { select: { email: true } } } } },
     })
   },
 

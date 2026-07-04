@@ -15,7 +15,14 @@ export interface SongDTO {
 export interface CollaboratorDTO {
   userId: string
   email: string
+  status: string
   lastSeen: string
+}
+
+export interface PendingInviteDTO {
+  songId: string
+  title: string
+  ownerEmail: string | null
 }
 
 export interface SongWithNotesDTO extends SongDTO {
@@ -28,7 +35,12 @@ type SongWithOwner = Song & { owner?: { email: string } | null }
 interface CollaboratorRow {
   userId: string
   user: { email: string }
+  status: string
   lastSeen: Date
+}
+
+interface PendingInviteRow {
+  song: { id: string; title: string; owner: { email: string } | null }
 }
 
 type SongDetail = SongWithOwner & {
@@ -69,8 +81,17 @@ export function toSongWithNotesDTO(s: SongDetail): SongWithNotesDTO {
       .map((c) => ({
         userId: c.userId,
         email: c.user.email,
+        status: c.status,
         lastSeen: c.lastSeen.toISOString(),
       })),
+  }
+}
+
+export function toPendingInviteDTO(row: PendingInviteRow): PendingInviteDTO {
+  return {
+    songId: row.song.id,
+    title: row.song.title,
+    ownerEmail: row.song.owner?.email ?? null,
   }
 }
 

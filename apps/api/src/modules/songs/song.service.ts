@@ -1,10 +1,10 @@
 import { Prisma } from '@prisma/client'
 
 import { SongRepo } from './song.repo'
-import { toNoteEventDTO, toSongDTO, toSongWithNotesDTO } from './song.types'
+import { toNoteEventDTO, toPendingInviteDTO, toSongDTO, toSongWithNotesDTO } from './song.types'
 
 import { ApiError } from '~/core/http/ApiError'
-import { hub } from '~/core/realtime/hub'
+import { emit } from '~/core/realtime/emit'
 import { AuthRepo } from '~/modules/auth/auth.repo'
 import { toNoteDTO } from '~/modules/notes/note.types'
 
@@ -20,15 +20,17 @@ export const SongService = {
   },
 
   async getById(id: string, userId?: string) {
-    if (userId) {
-      try {
-        await SongRepo.recordCollaborator(id, userId)
-      } catch (e) {
-        if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2003')) throw e
-      }
-    }
     const song = await SongRepo.findById(id)
     if (!song) throw ApiError.NotFound('Song not found')
+
+    if (userId && userId !== song.ownerId) {
+      const membership = await SongRepo.findCollaborator(id, userId)
+      if (membership?.status === 'pending') {
+        throw ApiError.Forbidden('Accept the invitation to open this song')
+      }
+      await SongRepo.recordCollaborator(id, userId)
+    }
+
     return toSongWithNotesDTO(song)
   },
 
@@ -47,7 +49,13 @@ export const SongService = {
   async assertCanEdit(songId: string, userId?: string) {
     const access = await SongRepo.findAccess(songId)
     if (!access) throw ApiError.NotFound('Song not found')
-    if (access.shareMode === 'view' && access.ownerId && access.ownerId !== userId) {
+    if (access.ownerId && access.ownerId === userId) return
+
+    const membership = userId ? await SongRepo.findCollaborator(songId, userId) : null
+    if (membership?.status === 'pending') {
+      throw ApiError.Forbidden('Accept the invitation before editing')
+    }
+    if (access.shareMode === 'view' && access.ownerId) {
       throw ApiError.Forbidden('This song is shared as view-only')
     }
   },
@@ -74,15 +82,12 @@ export const SongService = {
     const song = await SongRepo.setShareMode(id, shareMode)
     const dto = toSongDTO(song)
 
-    hub.broadcast(id, {
-      type: 'song.updated',
-      songId: id,
-      title: dto.title,
-      shareMode: dto.shareMode,
-      version: dto.version,
-      change: 'share',
+    emit.songUpdated(
+      id,
+      { title: dto.title, shareMode: dto.shareMode, version: dto.version },
+      'share',
       actor,
-    })
+    )
 
     return dto
   },
@@ -92,15 +97,12 @@ export const SongService = {
     const song = await SongRepo.updateTitle(id, title)
     const dto = toSongDTO(song)
 
-    hub.broadcast(id, {
-      type: 'song.updated',
-      songId: id,
-      title: dto.title,
-      shareMode: dto.shareMode,
-      version: dto.version,
-      change: 'title',
+    emit.songUpdated(
+      id,
+      { title: dto.title, shareMode: dto.shareMode, version: dto.version },
+      'title',
       actor,
-    })
+    )
 
     return dto
   },
@@ -116,16 +118,39 @@ export const SongService = {
     if (!invitee) throw ApiError.NotFound('No account is registered with that email')
     if (invitee.id === userId) throw ApiError.BadRequest('You already own this song')
 
-    const collaborator = await SongRepo.recordCollaborator(id, invitee.id)
+    const collaborator = await SongRepo.invitePending(id, invitee.id)
 
-    hub.notifyUser(invitee.id, {
-      type: 'invited',
-      songId: id,
-      title: access.title,
-      by: actor ?? 'Someone',
-    })
+    emit.invited(invitee.id, id, access.title, actor ?? 'Someone')
 
-    return { email: invitee.email, lastSeen: collaborator.lastSeen.toISOString() }
+    return {
+      userId: invitee.id,
+      email: invitee.email,
+      status: 'pending',
+      lastSeen: collaborator.lastSeen.toISOString(),
+    }
+  },
+
+  async listMyInvites(userId: string) {
+    const invites = await SongRepo.listPendingInvites(userId)
+    return invites.map(toPendingInviteDTO)
+  },
+
+  async respondToInvite(id: string, userId: string, accept: boolean, actor?: string) {
+    const membership = await SongRepo.findCollaborator(id, userId)
+    if (!membership || membership.status !== 'pending') {
+      throw ApiError.NotFound('No pending invitation for this song')
+    }
+    const access = await SongRepo.findAccess(id)
+
+    if (accept) {
+      await SongRepo.setCollaboratorStatus(id, userId, 'accepted')
+    } else {
+      await SongRepo.removeCollaborator(id, userId)
+    }
+
+    if (access?.ownerId) {
+      emit.inviteResponded(access.ownerId, id, access.title, actor ?? 'Someone', userId, accept)
+    }
   },
 
   async remove(id: string, userId?: string, actor?: string) {
@@ -146,8 +171,11 @@ export const SongService = {
       throw e
     }
 
-    hub.broadcast(id, { type: 'song.deleted', songId: id, actor })
-    for (const member of members) hub.notifyUser(member.userId, { type: 'song.removed', songId: id })
+    emit.songDeleted(
+      id,
+      members.map((m) => m.userId),
+      actor,
+    )
   },
 
   async removeCollaborator(id: string, userId: string | undefined, targetUserId: string) {
@@ -161,6 +189,6 @@ export const SongService = {
     }
 
     await SongRepo.removeCollaborator(id, targetUserId)
-    hub.notifyUser(targetUserId, { type: 'access.revoked', songId: id, title: access.title })
+    emit.accessRevoked(targetUserId, id, access.title)
   },
 }

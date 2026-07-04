@@ -1,6 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 
-import notificationsReducer from './notificationsSlice';
+import invitesReducer from './invitesSlice';
 import songReducer from './songSlice';
 import uiReducer from './uiSlice';
 
@@ -8,7 +8,7 @@ export const store = configureStore({
   reducer: {
     ui: uiReducer,
     song: songReducer,
-    notifications: notificationsReducer,
+    invites: invitesReducer,
   },
 });
 

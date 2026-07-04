@@ -58,6 +58,35 @@ export const NoteRepo = {
     return inserted
   },
 
+  async bulkImport(songId: string, input: { track: number; time: number }[]): Promise<number> {
+    const seen = new Set<string>()
+    const rows: Prisma.NoteCreateManyInput[] = []
+
+    for (const item of input) {
+      const key = `${item.track}:${item.time}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      rows.push({
+        songId,
+        title: `Imported ${rows.length + 1}`,
+        track: item.track,
+        time: item.time,
+        color: SEED_COLORS[rows.length % SEED_COLORS.length],
+      })
+    }
+
+    let inserted = 0
+    for (let i = 0; i < rows.length; i += 5000) {
+      const batch = await prisma.note.createMany({ data: rows.slice(i, i + 5000), skipDuplicates: true })
+      inserted += batch.count
+    }
+
+    if (inserted > 0) {
+      await prisma.song.update({ where: { id: songId }, data: { version: { increment: 1 } } })
+    }
+    return inserted
+  },
+
   create(
     songId: string,
     data: Required<Pick<NoteInput, 'title' | 'track' | 'time' | 'color'>> &

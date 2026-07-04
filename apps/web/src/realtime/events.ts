@@ -17,4 +17,12 @@ export type ServerEvent =
   | { type: 'song.removed'; songId: string }
   | { type: 'access.revoked'; songId: string; title: string }
   | { type: 'invited'; songId: string; title: string; by: string }
+  | {
+      type: 'invite.responded'
+      songId: string
+      title: string
+      by: string
+      userId: string
+      accepted: boolean
+    }
   | { type: 'presence'; songId: string; users: PresenceUser[] }
