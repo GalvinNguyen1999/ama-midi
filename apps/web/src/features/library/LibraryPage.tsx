@@ -261,11 +261,17 @@ export function LibraryPage() {
                 key={song.id}
                 sx={{
                   overflow: 'hidden',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
                   transition: 'transform 0.12s, border-color 0.12s',
                   '&:hover': { transform: 'translateY(-3px)', borderColor: accent },
                 }}
               >
-                <CardActionArea onClick={() => navigate(`/songs/${song.id}`)}>
+                <CardActionArea
+                  onClick={() => navigate(`/songs/${song.id}`)}
+                  sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}
+                >
                   <NoteFingerprint id={song.id} noteCount={song.noteCount} accent={accent} />
                   <CardContent>
                     <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
