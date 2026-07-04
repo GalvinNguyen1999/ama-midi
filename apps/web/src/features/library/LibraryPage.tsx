@@ -287,24 +287,17 @@ export function LibraryPage() {
                         </Typography>
                       </Box>
                     </Stack>
-                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'nowrap' }}>
                       <Chip
                         size="small"
                         color={roleColor}
                         variant={owned ? 'filled' : 'outlined'}
                         label={role}
                       />
-                      <Chip
-                        size="small"
-                        variant="outlined"
-                        label={`${song.noteCount.toLocaleString()} note${song.noteCount === 1 ? '' : 's'}`}
-                      />
-                      <Chip
-                        size="small"
-                        variant="outlined"
-                        icon={<AccessTimeIcon sx={{ fontSize: 14 }} />}
-                        label={relativeTime(song.updatedAt)}
-                      />
+                      <Typography variant="caption" color="text.secondary" noWrap>
+                        {song.noteCount.toLocaleString()} note{song.noteCount === 1 ? '' : 's'} ·{' '}
+                        {relativeTime(song.updatedAt)}
+                      </Typography>
                     </Stack>
                     <Stack
                       direction="row"
