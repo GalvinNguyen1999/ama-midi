@@ -1,4 +1,4 @@
-import { Box, Typography } from '@mui/material'
+import { Box, Chip, Typography } from '@mui/material'
 import { useEffect, useRef } from 'react'
 
 import type { Note } from '~/types/midi'
@@ -22,6 +22,7 @@ interface Props {
   onCreateAt: (track: number, time: number) => void
   onSelectNote: (note: Note) => void
   onMoveNote: (note: Note, track: number, time: number) => void
+  onDeleteMany: (ids: string[]) => void
   playhead: number | null
   loading?: boolean
 }
@@ -30,18 +31,27 @@ const GRID_WIDTH = TRACK_COUNT * TRACK_WIDTH
 const TIME_LABEL_STEP = 30
 const ROW_PX = TIME_LABEL_STEP * PX_PER_SECOND
 
-export function PianoRoll({ notes, onCreateAt, onSelectNote, onMoveNote, playhead, loading }: Props) {
+export function PianoRoll({
+  notes,
+  onCreateAt,
+  onSelectNote,
+  onMoveNote,
+  onDeleteMany,
+  playhead,
+  loading,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const playheadRef = useRef<HTMLDivElement | null>(null)
 
-  const { hover, overNote, drag, cursor, handlers } = usePianoRollInteraction({
+  const { hover, overNote, drag, selection, marquee, cursor, handlers } = usePianoRollInteraction({
     notes,
     onCreateAt,
     onSelectNote,
     onMoveNote,
+    onDeleteMany,
   })
 
-  useNoteCanvas(canvasRef, notes, drag?.note.id)
+  useNoteCanvas(canvasRef, notes, drag?.note.id, selection)
 
   useEffect(() => {
     if (playhead != null) playheadRef.current?.scrollIntoView({ block: 'nearest' })
@@ -106,6 +116,31 @@ export function PianoRoll({ notes, onCreateAt, onSelectNote, onMoveNote, playhea
             ref={canvasRef}
             sx={{ position: 'absolute', inset: 0, width: GRID_WIDTH, height: GRID_HEIGHT, pointerEvents: 'none' }}
           />
+
+          {marquee ? (
+            <Box
+              sx={{
+                position: 'absolute',
+                left: Math.min(marquee.x0, marquee.x1),
+                top: Math.min(marquee.y0, marquee.y1),
+                width: Math.abs(marquee.x1 - marquee.x0),
+                height: Math.abs(marquee.y1 - marquee.y0),
+                border: '1px solid #22d3ee',
+                bgcolor: 'rgba(34,211,238,0.12)',
+                pointerEvents: 'none',
+                zIndex: 4,
+              }}
+            />
+          ) : null}
+
+          {selection.size > 0 ? (
+            <Chip
+              size="small"
+              color="info"
+              label={`${selection.size} selected · press Delete`}
+              sx={{ position: 'absolute', top: 8, left: 8, zIndex: 6, pointerEvents: 'none' }}
+            />
+          ) : null}
 
           {hover && !drag && !overNote ? (
             <>

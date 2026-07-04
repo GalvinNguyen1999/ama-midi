@@ -29,11 +29,16 @@ function evt(x: number, y: number): MouseEvent<HTMLDivElement> {
   } as unknown as MouseEvent<HTMLDivElement>
 }
 
-function setup(onCreateAt = jest.fn(), onSelectNote = jest.fn(), onMoveNote = jest.fn()) {
+function setup(
+  onCreateAt = jest.fn(),
+  onSelectNote = jest.fn(),
+  onMoveNote = jest.fn(),
+  onDeleteMany = jest.fn(),
+) {
   const view = renderHook(() =>
-    usePianoRollInteraction({ notes: [note], onCreateAt, onSelectNote, onMoveNote }),
+    usePianoRollInteraction({ notes: [note], onCreateAt, onSelectNote, onMoveNote, onDeleteMany }),
   )
-  return { view, onCreateAt, onSelectNote, onMoveNote }
+  return { view, onCreateAt, onSelectNote, onMoveNote, onDeleteMany }
 }
 
 describe('usePianoRollInteraction', () => {
@@ -83,6 +88,27 @@ describe('usePianoRollInteraction', () => {
     act(() => view.result.current.handlers.onMouseUp())
     act(() => view.result.current.handlers.onClick(evt(50, 8)))
     expect(onCreateAt).not.toHaveBeenCalled()
+  })
+
+  it('marquee-selects notes inside the dragged rectangle', () => {
+    const { view } = setup()
+    act(() => view.result.current.handlers.onMouseDown(evt(NX - 20, NY - 20)))
+    act(() => view.result.current.handlers.onMouseMove(evt(NX + 20, NY + 20)))
+    act(() => view.result.current.handlers.onMouseUp())
+    expect([...view.result.current.selection]).toEqual(['n1'])
+  })
+
+  it('deletes the selection when Delete is pressed', () => {
+    const { view, onDeleteMany } = setup()
+    act(() => view.result.current.handlers.onMouseDown(evt(NX - 20, NY - 20)))
+    act(() => view.result.current.handlers.onMouseMove(evt(NX + 20, NY + 20)))
+    act(() => view.result.current.handlers.onMouseUp())
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete' }))
+    })
+    expect(onDeleteMany).toHaveBeenCalledWith(['n1'])
+    expect(view.result.current.selection.size).toBe(0)
   })
 
   it('resets hover and drag on mouse leave', () => {

@@ -245,6 +245,22 @@ export function EditorPage() {
     }
   }
 
+  const handleDeleteMany = async (ids: string[]) => {
+    if (!current) return
+    const targets = current.notes.filter((n) => ids.includes(n.id))
+    if (targets.length === 0) return
+
+    let deleted = 0
+    for (const note of targets) {
+      const res = await dispatch(removeNote(note.id))
+      if (removeNote.fulfilled.match(res)) {
+        recordHistory({ kind: 'delete', note })
+        deleted += 1
+      }
+    }
+    if (deleted > 0) toast.success(`Deleted ${deleted} note${deleted > 1 ? 's' : ''}`)
+  }
+
   const handleDeleteNote = async () => {
     const note = dialog.note
     closeDialog()
@@ -402,6 +418,7 @@ export function EditorPage() {
                 onCreateAt={openCreate}
                 onSelectNote={openEdit}
                 onMoveNote={handleMoveNote}
+                onDeleteMany={handleDeleteMany}
                 playhead={playing ? playhead : null}
                 loading={notesLoading > 0}
               />

@@ -18,6 +18,7 @@ export function useNoteCanvas(
   canvasRef: RefObject<HTMLCanvasElement | null>,
   notes: Note[],
   dragId: string | undefined,
+  selectedIds?: Set<string>,
 ) {
   useEffect(() => {
     const canvas = canvasRef.current
@@ -41,5 +42,16 @@ export function useNoteCanvas(
       ctx.fill()
       ctx.stroke()
     }
-  }, [canvasRef, notes, dragId])
+
+    if (selectedIds && selectedIds.size > 0) {
+      ctx.strokeStyle = '#22d3ee'
+      ctx.lineWidth = 2
+      for (const note of notes) {
+        if (note.id === dragId || !selectedIds.has(note.id)) continue
+        ctx.beginPath()
+        ctx.arc(trackCenterX(note.track), timeToY(note.time), NOTE_RADIUS + 4, 0, Math.PI * 2)
+        ctx.stroke()
+      }
+    }
+  }, [canvasRef, notes, dragId, selectedIds])
 }
