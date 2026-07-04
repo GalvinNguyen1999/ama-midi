@@ -21,6 +21,7 @@ router.post('/login', authLimiter, validateRequest(loginSchema), AuthController.
 router.put('/refresh_token', validateRequest(refreshSchema), AuthController.refresh)
 router.delete('/logout', AuthController.logout)
 router.get('/me', isAuthorized, AuthController.me)
+
 router.post('/2fa/setup', isAuthorized, AuthController.setup2fa)
 router.post('/2fa/enable', isAuthorized, validateRequest(twoFactorTokenSchema), AuthController.enable2fa)
 router.post('/2fa/verify', authLimiter, validateRequest(twoFactorVerifySchema), AuthController.verify2fa)

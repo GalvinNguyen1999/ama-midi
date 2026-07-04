@@ -30,8 +30,8 @@ export const NoteRepo = {
 
     while (rows.length < count && guard < count * 4) {
       guard++
-      const track = 1 + Math.floor(Math.random() * 8)
-      const time = Math.round(Math.random() * 300000) / 1000
+      const track = 1 + Math.floor(Math.random() * 8) // 1..8
+      const time = Math.round(Math.random() * 300000) / 1000 // 0..300s
       const key = `${track}:${time}`
       if (seen.has(key)) continue
       seen.add(key)

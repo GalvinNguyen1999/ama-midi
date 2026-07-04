@@ -12,10 +12,12 @@ const router = Router()
 
 router.post('/', validateRequest(createSongSchema), SongController.create)
 router.get('/', SongController.list)
+
 router.get('/:id', validateRequest(songIdParamSchema), SongController.getById)
 router.get('/:id/events', validateRequest(songIdParamSchema), SongController.getEvents)
-router.get('/:songId/notes', SongController.getNotes)
 router.delete('/:id', validateRequest(songIdParamSchema), SongController.remove)
+
+router.get('/:songId/notes', SongController.getNotes)
 router.post('/:songId/notes', validateRequest(createNoteSchema), NoteController.create)
 router.post('/:songId/notes/seed', NoteController.seed)
 

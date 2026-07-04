@@ -11,8 +11,8 @@ import { logger } from '~/config/logger'
 const presenceUserSchema = z.object({ id: z.string(), email: z.string() })
 
 const clientMessageSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('join'), songId: z.string().uuid(), user: presenceUserSchema.optional() }),
-  z.object({ type: z.literal('leave'), songId: z.string().uuid() }),
+  z.object({ type: z.literal('join'), songId: z.uuid(), user: presenceUserSchema.optional() }),
+  z.object({ type: z.literal('leave'), songId: z.uuid() }),
 ])
 
 const ANON: z.infer<typeof presenceUserSchema> = { id: 'anonymous', email: 'anonymous' }

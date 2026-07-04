@@ -2,14 +2,14 @@ import { z } from 'zod'
 
 export const registerSchema = z.object({
   body: z.object({
-    email: z.string().email(),
+    email: z.email(),
     password: z.string().min(6).max(72),
   }),
 })
 
 export const loginSchema = z.object({
   body: z.object({
-    email: z.string().email(),
+    email: z.email(),
     password: z.string().min(1),
   }),
 })
@@ -23,5 +23,5 @@ export const twoFactorTokenSchema = z.object({
 })
 
 export const twoFactorVerifySchema = z.object({
-  body: z.object({ userId: z.string().uuid(), token: z.string().length(6) }),
+  body: z.object({ userId: z.uuid(), token: z.string().length(6) }),
 })

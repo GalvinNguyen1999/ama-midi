@@ -16,9 +16,11 @@ function scheduleTone(ctx: AudioContext, freq: number, at: number, dur = 0.28) {
   osc.frequency.value = freq
   osc.connect(gain)
   gain.connect(ctx.destination)
+
   gain.gain.setValueAtTime(0, at)
   gain.gain.linearRampToValueAtTime(0.22, at + 0.006)
   gain.gain.exponentialRampToValueAtTime(0.0001, at + dur)
+
   osc.start(at)
   osc.stop(at + dur + 0.02)
 }

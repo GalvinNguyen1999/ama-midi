@@ -5,7 +5,7 @@ import { TIME_MAX, TIME_MIN, TRACK_MAX, TRACK_MIN } from '~/config/constants'
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'color must be a 6-digit hex like #7c3aed')
 
 export const createNoteSchema = z.object({
-  params: z.object({ songId: z.string().uuid() }),
+  params: z.object({ songId: z.uuid() }),
   body: z.object({
     title: z.string().trim().min(1).max(120),
     description: z.string().trim().max(1000).optional(),
@@ -16,7 +16,7 @@ export const createNoteSchema = z.object({
 })
 
 export const updateNoteSchema = z.object({
-  params: z.object({ id: z.string().uuid() }),
+  params: z.object({ id: z.uuid() }),
   body: z
     .object({
       title: z.string().trim().min(1).max(120).optional(),
@@ -29,5 +29,5 @@ export const updateNoteSchema = z.object({
 })
 
 export const noteIdParamSchema = z.object({
-  params: z.object({ id: z.string().uuid() }),
+  params: z.object({ id: z.uuid() }),
 })
