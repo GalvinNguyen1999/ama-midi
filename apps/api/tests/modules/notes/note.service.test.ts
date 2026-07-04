@@ -6,6 +6,9 @@ import { NoteService } from '~/modules/notes/note.service'
 
 jest.mock('~/config/db', () => ({ prisma: {} }))
 jest.mock('~/modules/notes/note.repo')
+jest.mock('~/modules/songs/song.service', () => ({
+  SongService: { assertCanEdit: jest.fn().mockResolvedValue(undefined) },
+}))
 
 const mockedRepo = NoteRepo as jest.Mocked<typeof NoteRepo>
 
@@ -50,6 +53,7 @@ describe('NoteService', () => {
   })
 
   it('maps missing note P2025 to 404 on update', async () => {
+    mockedRepo.findSongId.mockResolvedValue({ songId: 's1' } as never)
     mockedRepo.update.mockRejectedValue(prismaError('P2025'))
     await expect(NoteService.update('n1', { title: 'B' })).rejects.toMatchObject({ statusCode: 404 })
   })
