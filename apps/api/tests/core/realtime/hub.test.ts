@@ -102,6 +102,31 @@ describe('realtime hub', () => {
     expect(a.send).not.toHaveBeenCalled()
   })
 
+  it('relayCursor reaches other members but not the sender', () => {
+    const sender = mockWs()
+    const other = mockWs()
+    hub.join(asWs(sender), 'room6', { id: 'u1', email: 'a' })
+    hub.join(asWs(other), 'room6', { id: 'u2', email: 'b' })
+    sender.send.mockClear()
+    other.send.mockClear()
+
+    const event: WsServerEvent = {
+      type: 'cursor',
+      songId: 'room6',
+      user: { id: 'u1', email: 'a' },
+      track: 3,
+      time: 12,
+    }
+    hub.relayCursor(asWs(sender), 'room6', event)
+
+    expect(sender.send).not.toHaveBeenCalled()
+    expect(other.send).toHaveBeenCalledTimes(1)
+    expect(lastPayload(other)).toMatchObject({ type: 'cursor', track: 3, time: 12 })
+
+    hub.removeEverywhere(asWs(sender))
+    hub.removeEverywhere(asWs(other))
+  })
+
   it('removeEverywhere drops the socket from all its rooms', () => {
     const a = mockWs()
     const b = mockWs()

@@ -14,6 +14,13 @@ const clientMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('join'), songId: z.uuid(), user: presenceUserSchema.optional() }),
   z.object({ type: z.literal('leave'), songId: z.uuid() }),
   z.object({ type: z.literal('subscribe'), userId: z.string().min(1) }),
+  z.object({
+    type: z.literal('cursor'),
+    songId: z.uuid(),
+    user: presenceUserSchema,
+    track: z.number().nullable(),
+    time: z.number().nullable(),
+  }),
 ])
 
 const ANON: z.infer<typeof presenceUserSchema> = { id: 'anonymous', email: 'anonymous' }
@@ -40,6 +47,14 @@ export function createWsServer(server: Server) {
         hub.join(ws, msg.songId, msg.user ?? ANON)
       } else if (msg.type === 'leave') {
         hub.leave(ws, msg.songId)
+      } else if (msg.type === 'cursor') {
+        hub.relayCursor(ws, msg.songId, {
+          type: 'cursor',
+          songId: msg.songId,
+          user: msg.user,
+          track: msg.track,
+          time: msg.time,
+        })
       } else {
         hub.subscribeUser(ws, msg.userId)
       }

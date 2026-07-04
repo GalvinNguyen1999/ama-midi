@@ -26,3 +26,4 @@ export type ServerEvent =
       accepted: boolean
     }
   | { type: 'presence'; songId: string; users: PresenceUser[] }
+  | { type: 'cursor'; songId: string; user: PresenceUser; track: number | null; time: number | null }

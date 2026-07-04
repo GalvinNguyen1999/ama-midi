@@ -46,6 +46,16 @@ interface Props {
   readOnly?: boolean
   suggestions?: { track: number; time: number; color: string }[]
   onAcceptSuggestion?: (s: { track: number; time: number; color: string }) => void
+  cursors?: { user: { id: string; email: string }; track: number | null; time: number | null }[]
+  onCursorMove?: (track: number | null, time: number | null) => void
+}
+
+const CURSOR_COLORS = ['#f472b6', '#facc15', '#34d399', '#60a5fa', '#c084fc', '#fb923c']
+
+function cursorColor(id: string): string {
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
+  return CURSOR_COLORS[h % CURSOR_COLORS.length]
 }
 
 const GRID_WIDTH = TRACK_COUNT * TRACK_WIDTH
@@ -66,6 +76,8 @@ export function PianoRoll({
   readOnly,
   suggestions,
   onAcceptSuggestion,
+  cursors,
+  onCursorMove,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const playheadRef = useRef<HTMLDivElement | null>(null)
@@ -105,6 +117,10 @@ export function PianoRoll({
   useEffect(() => {
     if (playhead != null) playheadRef.current?.scrollIntoView({ block: 'nearest' })
   }, [playhead])
+
+  useEffect(() => {
+    onCursorMove?.(hover ? hover.track : null, hover ? hover.time : null)
+  }, [hover, onCursorMove])
 
   const timeLabels: number[] = []
   for (let t = 0; t <= TIME_MAX; t += TIME_LABEL_STEP) timeLabels.push(t)
@@ -301,6 +317,48 @@ export function PianoRoll({
               />
             </Tooltip>
           ))}
+
+          {cursors?.map((c) =>
+            c.track != null && c.time != null ? (
+              <Box
+                key={c.user.id}
+                sx={{
+                  position: 'absolute',
+                  left: trackCenterX(c.track) - NOTE_RADIUS,
+                  top: timeToY(c.time) - NOTE_RADIUS,
+                  pointerEvents: 'none',
+                  zIndex: 5,
+                }}
+              >
+                <Box
+                  sx={{
+                    width: NOTE_RADIUS * 2,
+                    height: NOTE_RADIUS * 2,
+                    borderRadius: '50%',
+                    border: `2px solid ${cursorColor(c.user.id)}`,
+                    boxShadow: `0 0 6px ${cursorColor(c.user.id)}`,
+                  }}
+                />
+                <Typography
+                  variant="caption"
+                  sx={{
+                    position: 'absolute',
+                    left: NOTE_RADIUS * 2 + 2,
+                    top: -4,
+                    px: 0.5,
+                    borderRadius: 1,
+                    bgcolor: cursorColor(c.user.id),
+                    color: '#000',
+                    fontSize: 10,
+                    lineHeight: 1.6,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {c.user.email.split('@')[0]}
+                </Typography>
+              </Box>
+            ) : null,
+          )}
 
           {playhead != null ? (
             <Box

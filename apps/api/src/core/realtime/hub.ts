@@ -34,6 +34,15 @@ export const hub = {
     this.broadcast(songId, { type: 'presence', songId, users: presenceUsers(songId) })
   },
 
+  relayCursor(sender: WebSocket, songId: string, event: WsServerEvent) {
+    const members = rooms.get(songId)
+
+    if (!members) return
+
+    const payload = JSON.stringify(event)
+    for (const ws of members.keys()) if (ws !== sender) send(ws, payload)
+  },
+
   subscribeUser(ws: WebSocket, userId: string) {
     let sockets = userRooms.get(userId)
 

@@ -39,7 +39,7 @@ export function EditorPage() {
   const [timbre, setTimbre] = useState<Timbre>('sine')
   const [loop, setLoop] = useState(false)
 
-  const { connected, presence } = useSongRealtime(id, user, {
+  const { connected, presence, cursors, sendCursor } = useSongRealtime(id, user, {
     onSongDeleted: (actor) => {
       toast.info(`${actor ? actor.split('@')[0] : 'The owner'} deleted this song`)
       navigate('/songs')
@@ -166,6 +166,8 @@ export function EditorPage() {
                 readOnly={readOnly}
                 suggestions={canEdit ? suggestions : []}
                 onAcceptSuggestion={accept}
+                cursors={cursors}
+                onCursorMove={sendCursor}
               />
             </Box>
 

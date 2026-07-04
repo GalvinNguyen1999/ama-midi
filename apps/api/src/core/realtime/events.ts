@@ -31,8 +31,10 @@ export type WsServerEvent =
       accepted: boolean
     }
   | { type: 'presence'; songId: string; users: PresenceUser[] }
+  | { type: 'cursor'; songId: string; user: PresenceUser; track: number | null; time: number | null }
 
 export type WsClientMessage =
   | { type: 'join'; songId: string; user?: PresenceUser }
   | { type: 'leave'; songId: string }
   | { type: 'subscribe'; userId: string }
+  | { type: 'cursor'; songId: string; user: PresenceUser; track: number | null; time: number | null }
