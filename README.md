@@ -3,12 +3,9 @@
 A web-based internal tool for prototyping **piano-roll** MIDI sequences for game soundtracks.
 The grid uses **X = 8 tracks (horizontal)** and **Y = time 0–300s (vertical, 0s at the top)**; every note is a circular point at `(track, time)`. Multiple composers can edit the same song in real time.
 
-**Live demo**
+**Live demo** — https://ama-midi-web.onrender.com
 
-- Web: https://ama-midi-web.onrender.com
-- API: https://ama-midi-api.onrender.com
-
-> Both run on Render's free tier — the first request after idle may take ~40–50s to wake. Register an account on the login page to try it.
+> Runs on Render's free tier — the first request after idle may take ~40–50s to wake. Register an account on the login page to try it.
 
 ---
 
@@ -20,11 +17,12 @@ The grid uses **X = 8 tracks (horizontal)** and **Y = time 0–300s (vertical, 0
 | **Architecture** | Typed end-to-end (TS strict); layered backend (route → controller → service → repo); feature-based frontend; relational Song/Note model. |
 | **Visualization & Integrity** | Accurate piano-roll grid; snap-to-grid; drag-to-move; **atomic transaction** + DB-level `unique(song, track, time)` → duplicate positions rejected with **409**; positioning logic unit-tested. |
 | **Security & Auth** | JWT access + refresh, **2FA (TOTP)**, API **rate limiting**, CSRF-safe design (Bearer header + `SameSite=strict` cookies + CORS allow-list). |
-| **UI/UX** | Dark "studio" theme (MUI); library / editor / settings pages; snap preview, hover cursor, loading & empty states; toasts on every action. |
-| **Advanced Backend** | **Pub/Sub over WebSocket** — note changes, presence, and activity broadcast to everyone in a song room instantly. |
+| **UI/UX** | Dark "studio" theme (MUI); library / editor / settings pages; **Inspector side-panel** for inline note editing (title/track/time/color); multi-select box + bulk move / delete / duplicate, arrow-key nudge, right-click context menu, **undo/redo**; snap preview, hover cursor, loading & empty states; toasts on every action. |
+| **Advanced Backend** | **Pub/Sub over WebSocket** — note changes, presence, **live collaborator cursors**, and a live **activity feed** broadcast to everyone in a song room instantly. |
 | **DevOps & Cloud** | Dockerized (`docker-compose`), GitHub Actions CI (lint/typecheck/test), deployed on Render via `render.yaml` blueprint. |
 | **Performance** | **Canvas** rendering + **viewport windowing** to handle 10,000+ notes; composite index + range endpoint; built-in stress-seed tool. |
-| **Collaboration extras** | Song ownership, share-link invites (`/songs/:id`), collaborator tracking. |
+| **Collaboration extras** | Song ownership; share-link invites (`/songs/:id`) with accept / decline and collaborator removal; live presence avatars + activity feed. |
+| **MIDI & playback** | Import / export standard `.mid` files (binary upload parsed server-side, client-side export); Web-Audio playback with loop, selectable timbre, click-the-ruler seek, and tempo-accurate **BPM** editing. |
 | **AI Innovation** | **AI Note Suggester** — a first-order Markov model learns the track-to-track transitions and typical time gap from the current sequence and proposes the next note(s) as clickable ghost notes. Runs in-process (no external API/key), so it works offline and on the free tier. |
 
 Also: **ledger pattern** — every note change is recorded in `note_events` (create/update/delete + payload + actor) as an auditable history.
@@ -55,7 +53,7 @@ Also: **ledger pattern** — every note change is recorded in `note_events` (cre
 
 **Request layering (backend):** each feature is a module (`modules/songs`, `modules/notes`, `modules/auth`) with `route → controller → service → repo`, zod validation middleware, `ApiError` + centralized error handler, and a `~/` path alias.
 
-**State (frontend):** server data flows through Redux Toolkit async thunks into a single store; realtime WebSocket events patch the same store, so the piano roll, presence and playback all read one source of truth. Reusable logic lives in feature-local hooks (`usePianoRollInteraction`, `useNoteCanvas`, `useWindowedNotes`, `usePlayback`, `useSongRealtime`); components only render.
+**State (frontend):** server data flows through Redux Toolkit async thunks into a single store; realtime WebSocket events patch the same store, so the piano roll, presence and playback all read one source of truth. Reusable logic lives in feature-local hooks (`usePianoRollInteraction`, `useNoteCanvas`, `useWindowedNotes`, `usePlayback`, `useSongRealtime`, `useNoteEditing`, `useMidiIO`, `useSuggestions`, `useSongEvents`, …); components only render.
 
 ### Data model
 
@@ -65,7 +63,7 @@ User ─1─┬─* Song ─1─┬─* Note        @@unique(songId, track, time
         │           └─* SongCollaborator ─*─1─ User
 ```
 
-- **Song** — `title`, `bpm`, `version` (optimistic concurrency), `ownerId`.
+- **Song** — `title`, editable `bpm` (tempo), `version` (optimistic concurrency, bumped on every note mutation), `ownerId`.
 - **Note** — `track` (1–8), `time` `Decimal(6,3)` (0–300), `color`; indexes on `songId` and `(songId, time)` for windowed reads.
 - **NoteEvent** — append-only audit trail of every mutation.
 - **SongCollaborator** — who has opened each song, with last-seen.
@@ -175,8 +173,12 @@ ama-midi/
 │  │     └─ modules/            # songs · notes · auth (route/controller/service/repo)
 │  └─ web/                      # React 19 + Vite + TS + MUI
 │     └─ src/
-│        ├─ apis/ store/ utils/
-│        └─ features/           # auth · library · songs (editor) · pianoRoll · settings · layout
+│        ├─ apis/ store/ utils/ realtime/
+│        └─ features/
+│           ├─ songs/           # editor, grouped by sub-domain:
+│           │                   #   toolbar · notes · sharing · suggestions · playback · midi · realtime · history
+│           ├─ pianoRoll/       # canvas render + interaction hooks
+│           └─ auth · library · settings · layout · notifications
 ├─ docker-compose.yml
 ├─ render.yaml
 └─ .github/workflows/ci.yml
