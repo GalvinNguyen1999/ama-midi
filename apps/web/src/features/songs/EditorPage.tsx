@@ -4,7 +4,9 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import LinkIcon from '@mui/icons-material/Link'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
+import RedoIcon from '@mui/icons-material/Redo'
 import StopIcon from '@mui/icons-material/Stop'
+import UndoIcon from '@mui/icons-material/Undo'
 import {
   Avatar,
   AvatarGroup,
@@ -33,6 +35,7 @@ import { seedNotesApi } from '~/apis/midi'
 import { DEFAULT_NOTE_COLOR } from '~/features/pianoRoll/config'
 import { PianoRoll } from '~/features/pianoRoll/PianoRoll'
 import { NoteDialog, type NoteFormValues } from '~/features/songs/NoteDialog'
+import { useEditorHistory, type NotePatch } from '~/features/songs/useEditorHistory'
 import { usePlayback } from '~/features/songs/usePlayback'
 import { useSongRealtime } from '~/features/songs/useSongRealtime'
 import { useWindowedNotes } from '~/features/songs/useWindowedNotes'
@@ -56,6 +59,16 @@ const emptyValues: NoteFormValues = {
   color: DEFAULT_NOTE_COLOR,
 }
 
+function toPatch(note: Note): NotePatch {
+  return {
+    title: note.title,
+    description: note.description ?? undefined,
+    track: note.track,
+    time: note.time,
+    color: note.color,
+  }
+}
+
 export function EditorPage() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
@@ -75,6 +88,28 @@ export function EditorPage() {
   const [perfAnchor, setPerfAnchor] = useState<null | HTMLElement>(null)
   const [seeding, setSeeding] = useState(false)
   const { scrollRef, onScroll, reload } = useWindowedNotes(id)
+  const {
+    record: recordHistory,
+    undo,
+    redo,
+    reset: resetHistory,
+    canUndo,
+    canRedo,
+  } = useEditorHistory({
+    create: async (note) => {
+      if (!current) return null
+      const res = await dispatch(addNote({ songId: current.id, input: toPatch(note) }))
+      return addNote.fulfilled.match(res) ? res.payload : null
+    },
+    remove: async (noteId) => {
+      const res = await dispatch(removeNote(noteId))
+      return removeNote.fulfilled.match(res)
+    },
+    update: async (noteId, patch) => {
+      const res = await dispatch(editNote({ id: noteId, input: patch }))
+      return editNote.fulfilled.match(res)
+    },
+  })
   const [dialog, setDialog] = useState<DialogState>({
     open: false,
     mode: 'create',
@@ -89,6 +124,28 @@ export function EditorPage() {
   useEffect(() => {
     stop()
   }, [id, stop])
+
+  useEffect(() => {
+    resetHistory()
+  }, [id, resetHistory])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return
+      const key = e.key.toLowerCase()
+      if (key !== 'z' && key !== 'y') return
+
+      const target = e.target as HTMLElement | null
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return
+
+      e.preventDefault()
+      if (key === 'y' || e.shiftKey) redo()
+      else undo()
+    }
+
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [undo, redo])
 
   const copyShareLink = async () => {
     if (!current) return
@@ -130,7 +187,16 @@ export function EditorPage() {
   const handleMoveNote = async (note: Note, track: number, time: number) => {
     dispatch(applyNoteUpsert({ ...note, track, time }))
     const res = await dispatch(editNote({ id: note.id, input: { track, time } }))
-    if (editNote.rejected.match(res)) dispatch(applyNoteUpsert(note))
+    if (editNote.rejected.match(res)) {
+      dispatch(applyNoteUpsert(note))
+      return
+    }
+    recordHistory({
+      kind: 'update',
+      id: note.id,
+      before: toPatch(note),
+      after: toPatch({ ...note, track, time }),
+    })
   }
 
   const openCreate = (track: number, time: number) =>
@@ -164,10 +230,17 @@ export function EditorPage() {
     closeDialog()
     if (dialog.mode === 'create') {
       const res = await dispatch(addNote({ songId: current.id, input }))
-      if (addNote.fulfilled.match(res)) toast.success('Note added')
+      if (addNote.fulfilled.match(res)) {
+        toast.success('Note added')
+        recordHistory({ kind: 'create', note: res.payload })
+      }
     } else if (dialog.note) {
+      const before = toPatch(dialog.note)
       const res = await dispatch(editNote({ id: dialog.note.id, input }))
-      if (editNote.fulfilled.match(res)) toast.success('Note updated')
+      if (editNote.fulfilled.match(res)) {
+        toast.success('Note updated')
+        recordHistory({ kind: 'update', id: dialog.note.id, before, after: toPatch(res.payload) })
+      }
     }
   }
 
@@ -176,7 +249,10 @@ export function EditorPage() {
     closeDialog()
     if (note) {
       const res = await dispatch(removeNote(note.id))
-      if (removeNote.fulfilled.match(res)) toast.success('Note deleted')
+      if (removeNote.fulfilled.match(res)) {
+        toast.success('Note deleted')
+        recordHistory({ kind: 'delete', note })
+      }
     }
   }
 
@@ -239,6 +315,24 @@ export function EditorPage() {
                 color={connected ? 'success' : 'default'}
                 variant="outlined"
               />
+            ) : null}
+            {current ? (
+              <>
+                <Tooltip title="Undo (⌘Z)">
+                  <span>
+                    <IconButton size="small" onClick={() => undo()} disabled={!canUndo}>
+                      <UndoIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Tooltip title="Redo (⇧⌘Z)">
+                  <span>
+                    <IconButton size="small" onClick={() => redo()} disabled={!canRedo}>
+                      <RedoIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </>
             ) : null}
             {current && current.notes.length > 0 ? (
               <Button
