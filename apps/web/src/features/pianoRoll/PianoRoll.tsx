@@ -1,18 +1,7 @@
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import EditIcon from '@mui/icons-material/Edit'
-import {
-  Box,
-  Button,
-  Chip,
-  ListItemIcon,
-  ListItemText,
-  Menu,
-  MenuItem,
-  Stack,
-  Tooltip,
-  Typography,
-} from '@mui/material'
+import { Box, ListItemIcon, ListItemText, Menu, MenuItem, Tooltip, Typography } from '@mui/material'
 import { useEffect, useRef } from 'react'
 
 import type { Note } from '~/types/midi'
@@ -93,7 +82,6 @@ export function PianoRoll({
     cursor,
     menu,
     closeMenu,
-    deleteSelected,
     clearSelection,
     handlers,
   } = usePianoRollInteraction({
@@ -216,29 +204,6 @@ export function PianoRoll({
                 zIndex: 4,
               }}
             />
-          ) : null}
-
-          {selection.size > 0 ? (
-            <Stack
-              direction="row"
-              spacing={1}
-              alignItems="center"
-              sx={{ position: 'absolute', top: 8, left: 8, zIndex: 6 }}
-            >
-              <Chip size="small" color="info" label={`${selection.size} selected`} />
-              <Button
-                size="small"
-                variant="contained"
-                color="error"
-                startIcon={<DeleteOutlineIcon />}
-                onClick={deleteSelected}
-              >
-                Delete
-              </Button>
-              <Button size="small" color="inherit" onClick={clearSelection}>
-                Clear
-              </Button>
-            </Stack>
           ) : null}
 
           {hover && !drag && !overNote ? (
