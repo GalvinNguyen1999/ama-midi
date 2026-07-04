@@ -40,6 +40,7 @@ import type { ChangeEvent, RefObject } from 'react'
 
 import { HistoryDrawer } from '~/features/songs/history/HistoryDrawer'
 import { SharePopover } from '~/features/songs/sharing/SharePopover'
+import { BpmField } from '~/features/songs/toolbar/BpmField'
 import type { useSharing } from '~/features/songs/sharing/useSharing'
 import type { Timbre } from '~/features/songs/playback/usePlayback'
 import type { useSongActions } from '~/features/songs/toolbar/useSongActions'
@@ -55,6 +56,8 @@ interface Transport {
   toggleLoop: () => void
   timbre: Timbre
   setTimbre: (t: Timbre) => void
+  bpm: number
+  onCommitBpm: (bpm: number) => void
 }
 
 interface ToolbarHistory {
@@ -282,6 +285,9 @@ export function EditorToolbar({
                 </Select>
               </Tooltip>
             </>
+          ) : null}
+          {current && canEdit ? (
+            <BpmField bpm={transport.bpm} onCommit={transport.onCommitBpm} />
           ) : null}
           {current ? (
             <Tooltip title="Share this song">

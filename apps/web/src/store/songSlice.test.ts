@@ -7,6 +7,7 @@ import reducer, {
   loadNotes,
   openSong,
   removeNote,
+  updateBpm,
 } from '~/store/songSlice'
 import type { Collaborator, Note, Song, SongDetail } from '~/types/midi'
 
@@ -21,6 +22,7 @@ jest.mock('~/apis/midi', () => ({
   deleteSongApi: jest.fn(),
   setShareModeApi: jest.fn(),
   renameSongApi: jest.fn(),
+  updateBpmApi: jest.fn(),
 }))
 
 const song: SongDetail = {
@@ -61,6 +63,13 @@ describe('songSlice', () => {
     expect(state.current).toMatchObject({ id: 's1', notes: [] })
     expect(state.loadedChunks).toEqual([])
     expect(state.loadGeneration).toBe(1)
+  })
+
+  it('updateBpm.fulfilled patches the current song tempo', () => {
+    let state = opened()
+    state = reducer(state, updateBpm.fulfilled({ ...song, bpm: 90, version: 2 }, 'req', { id: 's1', bpm: 90 }))
+    expect(state.current?.bpm).toBe(90)
+    expect(state.current?.version).toBe(2)
   })
 
   it('adding a note increments the live note count', () => {

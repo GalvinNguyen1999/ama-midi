@@ -160,6 +160,34 @@ describe('SongService', () => {
     expect(dto).toMatchObject({ id: 's1', title: 'New' })
   })
 
+  it('updateBpm persists the tempo when the caller can edit', async () => {
+    mockedRepo.findAccess.mockResolvedValue({ ownerId: 'owner-1', shareMode: 'edit' } as never)
+    mockedRepo.updateBpm.mockResolvedValue({
+      id: 's1',
+      title: 'Song',
+      bpm: 90,
+      version: 4,
+      shareMode: 'edit',
+      ownerId: 'owner-1',
+      owner: { email: 'o@x.com' },
+      createdAt: new Date('2020-01-01T00:00:00Z'),
+      updatedAt: new Date('2020-01-01T00:00:00Z'),
+    } as never)
+
+    const dto = await SongService.updateBpm('s1', 'owner-1', 90)
+
+    expect(mockedRepo.updateBpm).toHaveBeenCalledWith('s1', 90)
+    expect(dto).toMatchObject({ id: 's1', bpm: 90 })
+  })
+
+  it('updateBpm is rejected for a non-owner on a view-only song', async () => {
+    mockedRepo.findAccess.mockResolvedValue({ ownerId: 'owner-1', shareMode: 'view' } as never)
+    await expect(SongService.updateBpm('s1', 'intruder', 90)).rejects.toMatchObject({
+      statusCode: 403,
+    })
+    expect(mockedRepo.updateBpm).not.toHaveBeenCalled()
+  })
+
   it('invite throws 403 when the caller is not the owner', async () => {
     mockedRepo.findAccess.mockResolvedValue({ ownerId: 'owner-1', shareMode: 'edit' } as never)
     await expect(SongService.invite('s1', 'intruder', 'b@x.com')).rejects.toMatchObject({

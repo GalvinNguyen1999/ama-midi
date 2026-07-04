@@ -41,10 +41,16 @@ export function applySongEvent(dispatch: AppDispatch, event: ServerEvent, selfEm
           title: event.title,
           shareMode: event.shareMode,
           version: event.version,
+          bpm: event.bpm,
         }),
       )
       if (fromOther) {
-        const what = event.change === 'title' ? 'renamed the song' : 'changed sharing'
+        const what =
+          event.change === 'title'
+            ? 'renamed the song'
+            : event.change === 'bpm'
+              ? 'changed the tempo'
+              : 'changed sharing'
         toast.info(`${actorName(event.actor)} ${what}`)
       }
       break

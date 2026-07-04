@@ -46,6 +46,11 @@ export const renameSongApi = async (id: string, title: string): Promise<Song> =>
   return data
 }
 
+export const updateBpmApi = async (id: string, bpm: number): Promise<Song> => {
+  const { data } = await authorizedAxiosInstance.patch<Song>(`/songs/${id}/bpm`, { bpm })
+  return data
+}
+
 export const getMyInvitesApi = async (): Promise<PendingInvite[]> => {
   const { data } = await authorizedAxiosInstance.get<PendingInvite[]>('/songs/invitations')
   return data

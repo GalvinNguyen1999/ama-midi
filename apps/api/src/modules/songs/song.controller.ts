@@ -47,6 +47,11 @@ export const SongController = {
     res.json(await SongService.rename(stringParam(req, 'id'), req.user?.id, title, req.user?.email))
   }),
 
+  updateBpm: asyncHandler(async (req: Request, res: Response) => {
+    const { bpm } = req.body as { bpm: number }
+    res.json(await SongService.updateBpm(stringParam(req, 'id'), req.user?.id, bpm, req.user?.email))
+  }),
+
   setShare: asyncHandler(async (req: Request, res: Response) => {
     const { shareMode } = req.body as { shareMode: 'edit' | 'view' }
     res.json(

@@ -114,6 +114,21 @@ export const SongService = {
     return dto
   },
 
+  async updateBpm(id: string, userId: string | undefined, bpm: number, actor?: string) {
+    await SongService.assertCanEdit(id, userId)
+    const song = await SongRepo.updateBpm(id, bpm)
+    const dto = toSongDTO(song)
+
+    emit.songUpdated(
+      id,
+      { title: dto.title, shareMode: dto.shareMode, version: dto.version, bpm: dto.bpm },
+      'bpm',
+      actor,
+    )
+
+    return dto
+  },
+
   async invite(id: string, userId: string | undefined, email: string, actor?: string) {
     const access = await SongRepo.findAccess(id)
     if (!access) throw ApiError.NotFound('Song not found')

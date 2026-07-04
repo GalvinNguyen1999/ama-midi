@@ -23,7 +23,7 @@ import { useSuggestions } from '~/features/songs/suggestions/useSuggestions'
 import { useUndoRedoShortcuts } from '~/features/songs/toolbar/useUndoRedoShortcuts'
 import { useWindowedNotes } from '~/features/songs/notes/useWindowedNotes'
 import { useAppDispatch, useAppSelector } from '~/store/hooks'
-import { addNote, editNote, openSong, removeNote } from '~/store/songSlice'
+import { addNote, editNote, openSong, removeNote, updateBpm } from '~/store/songSlice'
 import { readUser } from '~/utils/session'
 
 export function EditorPage() {
@@ -130,6 +130,12 @@ export function EditorPage() {
           toggleLoop: () => setLoop((v) => !v),
           timbre,
           setTimbre,
+          bpm: current?.bpm ?? 120,
+          onCommitBpm: async (bpm) => {
+            if (!current) return
+            const res = await dispatch(updateBpm({ id: current.id, bpm }))
+            if (updateBpm.fulfilled.match(res)) toast.success(`Tempo set to ${bpm} BPM`)
+          },
         }}
         history={{ undo, redo, canUndo, canRedo }}
         midi={{ fileInputRef, onFile, exportMidi, exporting, importMidi, importing }}

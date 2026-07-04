@@ -9,6 +9,7 @@ import {
   getSong,
   listSongs,
   renameSongApi,
+  updateBpmApi,
   setShareModeApi,
   updateNoteApi,
 } from '~/apis/midi'
@@ -110,11 +111,16 @@ export const renameSong = createAsyncThunk('song/renameSong', (args: { id: strin
   renameSongApi(args.id, args.title),
 )
 
+export const updateBpm = createAsyncThunk('song/updateBpm', (args: { id: string; bpm: number }) =>
+  updateBpmApi(args.id, args.bpm),
+)
+
 interface SongPatch {
   id: string
   title?: string
   shareMode?: 'edit' | 'view'
   version?: number
+  bpm?: number
 }
 
 function applySongPatch(state: SongState, patch: SongPatch) {
@@ -122,12 +128,14 @@ function applySongPatch(state: SongState, patch: SongPatch) {
     if (patch.title != null) state.current.title = patch.title
     if (patch.shareMode != null) state.current.shareMode = patch.shareMode
     if (patch.version != null) state.current.version = patch.version
+    if (patch.bpm != null) state.current.bpm = patch.bpm
   }
   const row = state.songs.find((s) => s.id === patch.id)
   if (row) {
     if (patch.title != null) row.title = patch.title
     if (patch.shareMode != null) row.shareMode = patch.shareMode
     if (patch.version != null) row.version = patch.version
+    if (patch.bpm != null) row.bpm = patch.bpm
   }
 }
 
@@ -234,6 +242,13 @@ const songSlice = createSlice({
         applySongPatch(state, {
           id: action.payload.id,
           title: action.payload.title,
+          version: action.payload.version,
+        })
+      })
+      .addCase(updateBpm.fulfilled, (state, action: PayloadAction<Song>) => {
+        applySongPatch(state, {
+          id: action.payload.id,
+          bpm: action.payload.bpm,
           version: action.payload.version,
         })
       })

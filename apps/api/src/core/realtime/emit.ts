@@ -17,8 +17,8 @@ export const emit = {
 
   songUpdated(
     songId: string,
-    data: { title: string; shareMode: string; version: number },
-    change: 'title' | 'share',
+    data: { title: string; shareMode: string; version: number; bpm?: number },
+    change: 'title' | 'share' | 'bpm',
     actor?: string,
   ) {
     hub.broadcast(songId, { type: 'song.updated', songId, change, actor, ...data })

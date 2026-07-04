@@ -10,7 +10,8 @@ export type ServerEvent =
       title: string
       shareMode: 'edit' | 'view'
       version: number
-      change: 'title' | 'share'
+      bpm?: number
+      change: 'title' | 'share' | 'bpm'
       actor?: string
     }
   | { type: 'song.deleted'; songId: string; actor?: string }

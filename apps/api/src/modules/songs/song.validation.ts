@@ -21,6 +21,11 @@ export const renameSongSchema = z.object({
   body: z.object({ title: z.string().trim().min(1).max(120) }),
 })
 
+export const updateBpmSchema = z.object({
+  params: z.object({ id: z.uuid() }),
+  body: z.object({ bpm: z.number().int().min(20).max(300) }),
+})
+
 export const inviteSchema = z.object({
   params: z.object({ id: z.uuid() }),
   body: z.object({ email: z.email() }),

@@ -72,6 +72,8 @@ function renderToolbar(overrides: Record<string, unknown> = {}) {
       toggleLoop: jest.fn(),
       timbre: 'sine' as const,
       setTimbre: jest.fn(),
+      bpm: 120,
+      onCommitBpm: jest.fn(),
     },
     history: { undo: jest.fn(), redo: jest.fn(), canUndo: false, canRedo: false },
     midi: {

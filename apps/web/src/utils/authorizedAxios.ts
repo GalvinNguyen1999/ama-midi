@@ -60,7 +60,9 @@ authorizedAxiosInstance.interceptors.response.use(
 
     if (status !== 410) {
       const data = error.response?.data as { message?: string } | undefined
-      toast.error(data?.message ?? error.message)
+      const message = data?.message ?? error.message
+      if (status === 409) toast.warning(message)
+      else toast.error(message)
     }
 
     return Promise.reject(error)

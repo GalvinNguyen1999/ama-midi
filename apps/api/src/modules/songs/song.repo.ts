@@ -71,6 +71,14 @@ export const SongRepo = {
     })
   },
 
+  updateBpm(id: string, bpm: number) {
+    return prisma.song.update({
+      where: { id },
+      data: { bpm, version: { increment: 1 } },
+      include: ownerSelect,
+    })
+  },
+
   listCollaboratorIds(songId: string) {
     return prisma.songCollaborator.findMany({ where: { songId }, select: { userId: true } })
   },
