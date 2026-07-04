@@ -9,6 +9,7 @@ import PersonIcon from '@mui/icons-material/Person'
 import SearchIcon from '@mui/icons-material/Search'
 import {
   Avatar,
+  AvatarGroup,
   Box,
   Button,
   Card,
@@ -251,6 +252,8 @@ export function LibraryPage() {
         >
           {filtered.map((song) => {
             const owned = !song.ownerId || song.ownerId === user?.id
+            const role = owned ? 'Owner' : song.shareMode === 'view' ? 'Viewer' : 'Editor'
+            const roleColor = owned ? 'primary' : song.shareMode === 'view' ? 'warning' : 'success'
             const accent = accentFor(song.id)
             return (
               <Card
@@ -278,8 +281,18 @@ export function LibraryPage() {
                         </Typography>
                       </Box>
                     </Stack>
-                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                      <Chip size="small" label={`v${song.version}`} variant="outlined" />
+                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                      <Chip
+                        size="small"
+                        color={roleColor}
+                        variant={owned ? 'filled' : 'outlined'}
+                        label={role}
+                      />
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        label={`${song.noteCount.toLocaleString()} note${song.noteCount === 1 ? '' : 's'}`}
+                      />
                       <Chip
                         size="small"
                         variant="outlined"
@@ -287,6 +300,21 @@ export function LibraryPage() {
                         label={relativeTime(song.updatedAt)}
                       />
                     </Stack>
+                    {song.collaborators.length > 0 ? (
+                      <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mt: 1.5 }}>
+                        <GroupIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                        <AvatarGroup
+                          max={4}
+                          sx={{ '& .MuiAvatar-root': { width: 24, height: 24, fontSize: 11 } }}
+                        >
+                          {song.collaborators.map((c) => (
+                            <Tooltip key={c.email} title={c.email}>
+                              <Avatar>{c.email.charAt(0).toUpperCase()}</Avatar>
+                            </Tooltip>
+                          ))}
+                        </AvatarGroup>
+                      </Stack>
+                    ) : null}
                   </CardContent>
                 </CardActionArea>
                 <Stack direction="row" justifyContent="flex-end" sx={{ px: 1, pb: 1 }}>

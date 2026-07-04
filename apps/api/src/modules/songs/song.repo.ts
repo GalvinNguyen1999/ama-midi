@@ -7,8 +7,19 @@ export const SongRepo = {
     return prisma.song.create({ data, include: ownerSelect })
   },
 
-  list() {
-    return prisma.song.findMany({ orderBy: { createdAt: 'desc' }, include: ownerSelect })
+  list(userId: string) {
+    return prisma.song.findMany({
+      where: { OR: [{ ownerId: userId }, { collaborators: { some: { userId } } }] },
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        ...ownerSelect,
+        _count: { select: { notes: true } },
+        collaborators: {
+          include: { user: { select: { email: true } } },
+          orderBy: { lastSeen: 'desc' },
+        },
+      },
+    })
   },
 
   findById(id: string) {

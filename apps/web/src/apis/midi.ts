@@ -1,8 +1,16 @@
-import type { Note, NoteEvent, NoteInput, NoteUpdate, Song, SongDetail } from '~/types/midi'
+import type {
+  Collaborator,
+  Note,
+  NoteEvent,
+  NoteInput,
+  NoteUpdate,
+  Song,
+  SongDetail,
+} from '~/types/midi'
 import authorizedAxiosInstance from '~/utils/authorizedAxios'
 
-export const listSongs = async (): Promise<Song[]> => {
-  const { data } = await authorizedAxiosInstance.get<Song[]>('/songs')
+export const listSongs = async (): Promise<SongDetail[]> => {
+  const { data } = await authorizedAxiosInstance.get<SongDetail[]>('/songs')
   return data
 }
 
@@ -34,6 +42,13 @@ export const setShareModeApi = async (id: string, shareMode: 'edit' | 'view'): P
 
 export const renameSongApi = async (id: string, title: string): Promise<Song> => {
   const { data } = await authorizedAxiosInstance.patch<Song>(`/songs/${id}`, { title })
+  return data
+}
+
+export const inviteCollaboratorApi = async (id: string, email: string): Promise<Collaborator> => {
+  const { data } = await authorizedAxiosInstance.post<Collaborator>(`/songs/${id}/collaborators`, {
+    email,
+  })
   return data
 }
 

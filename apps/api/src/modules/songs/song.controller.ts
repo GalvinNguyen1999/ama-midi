@@ -13,8 +13,8 @@ export const SongController = {
     res.status(StatusCodes.CREATED).json(song)
   }),
 
-  list: asyncHandler(async (_req: Request, res: Response) => {
-    res.json(await SongService.list())
+  list: asyncHandler(async (req: Request, res: Response) => {
+    res.json(await SongService.list(req.user?.id))
   }),
 
   getById: asyncHandler(async (req: Request, res: Response) => {
@@ -47,6 +47,11 @@ export const SongController = {
     res.json(
       await SongService.setShareMode(stringParam(req, 'id'), req.user?.id, shareMode, req.user?.email),
     )
+  }),
+
+  invite: asyncHandler(async (req: Request, res: Response) => {
+    const { email } = req.body as { email: string }
+    res.json(await SongService.invite(stringParam(req, 'id'), req.user?.id, email))
   }),
 
   remove: asyncHandler(async (req: Request, res: Response) => {

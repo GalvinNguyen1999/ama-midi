@@ -1,10 +1,13 @@
+import { AuthRepo } from '~/modules/auth/auth.repo'
 import { SongRepo } from '~/modules/songs/song.repo'
 import { SongService } from '~/modules/songs/song.service'
 
 jest.mock('~/config/db', () => ({ prisma: {} }))
 jest.mock('~/modules/songs/song.repo')
+jest.mock('~/modules/auth/auth.repo')
 
 const mockedRepo = SongRepo as jest.Mocked<typeof SongRepo>
+const mockedAuth = AuthRepo as jest.Mocked<typeof AuthRepo>
 
 describe('SongService', () => {
   afterEach(() => jest.clearAllMocks())
@@ -110,6 +113,34 @@ describe('SongService', () => {
 
     expect(mockedRepo.updateTitle).toHaveBeenCalledWith('s1', 'New')
     expect(dto).toMatchObject({ id: 's1', title: 'New' })
+  })
+
+  it('invite throws 403 when the caller is not the owner', async () => {
+    mockedRepo.findAccess.mockResolvedValue({ ownerId: 'owner-1', shareMode: 'edit' } as never)
+    await expect(SongService.invite('s1', 'intruder', 'b@x.com')).rejects.toMatchObject({
+      statusCode: 403,
+    })
+  })
+
+  it('invite throws 404 when no account has that email', async () => {
+    mockedRepo.findAccess.mockResolvedValue({ ownerId: 'owner-1', shareMode: 'edit' } as never)
+    mockedAuth.findByEmail.mockResolvedValue(null as never)
+    await expect(SongService.invite('s1', 'owner-1', 'ghost@x.com')).rejects.toMatchObject({
+      statusCode: 404,
+    })
+  })
+
+  it('invite adds an existing user as a collaborator', async () => {
+    mockedRepo.findAccess.mockResolvedValue({ ownerId: 'owner-1', shareMode: 'edit' } as never)
+    mockedAuth.findByEmail.mockResolvedValue({ id: 'u2', email: 'b@x.com' } as never)
+    mockedRepo.recordCollaborator.mockResolvedValue({
+      lastSeen: new Date('2020-01-01T00:00:00Z'),
+    } as never)
+
+    const dto = await SongService.invite('s1', 'owner-1', 'b@x.com')
+
+    expect(mockedRepo.recordCollaborator).toHaveBeenCalledWith('s1', 'u2')
+    expect(dto).toMatchObject({ email: 'b@x.com' })
   })
 
   it('getNotes maps repo rows to note DTOs within the requested range', async () => {

@@ -41,7 +41,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
-import { seedNotesApi } from '~/apis/midi'
+import { inviteCollaboratorApi, seedNotesApi } from '~/apis/midi'
 import { DEFAULT_NOTE_COLOR } from '~/features/pianoRoll/config'
 import { PianoRoll } from '~/features/pianoRoll/PianoRoll'
 import { HistoryDrawer } from '~/features/songs/HistoryDrawer'
@@ -121,6 +121,8 @@ export function EditorPage() {
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviting, setInviting] = useState(false)
   const [seeding, setSeeding] = useState(false)
   const { scrollRef, onScroll, reload } = useWindowedNotes(id)
   const {
@@ -291,6 +293,21 @@ export function EditorPage() {
     if (!current || !title || title === current.title) return
     const res = await dispatch(renameSong({ id: current.id, title }))
     if (renameSong.fulfilled.match(res)) toast.success('Song renamed')
+  }
+
+  const handleInvite = async () => {
+    const email = inviteEmail.trim()
+    if (!current || !email) return
+    setInviting(true)
+    try {
+      const collaborator = await inviteCollaboratorApi(current.id, email)
+      toast.success(`Invited ${collaborator.email}`)
+      setInviteEmail('')
+    } catch {
+      // the axios interceptor surfaces the error message
+    } finally {
+      setInviting(false)
+    }
   }
 
   const handleSetShare = async (mode: 'edit' | 'view') => {
@@ -567,6 +584,37 @@ export function EditorPage() {
                   Copy
                 </Button>
               </Stack>
+
+              {isOwner ? (
+                <>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2, mb: 0.75 }}>
+                    Invite a registered user by email
+                  </Typography>
+                  <Stack direction="row" spacing={1}>
+                    <TextField
+                      size="small"
+                      fullWidth
+                      type="email"
+                      placeholder="name@example.com"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          handleInvite()
+                        }
+                      }}
+                    />
+                    <Button
+                      variant="outlined"
+                      onClick={handleInvite}
+                      disabled={inviting || !inviteEmail.trim()}
+                    >
+                      Invite
+                    </Button>
+                  </Stack>
+                </>
+              ) : null}
             </Popover>
 
             <HistoryDrawer

@@ -20,3 +20,8 @@ export const renameSongSchema = z.object({
   params: z.object({ id: z.uuid() }),
   body: z.object({ title: z.string().trim().min(1).max(120) }),
 })
+
+export const inviteSchema = z.object({
+  params: z.object({ id: z.uuid() }),
+  body: z.object({ email: z.email() }),
+})

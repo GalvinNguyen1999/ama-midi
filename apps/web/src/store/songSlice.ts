@@ -17,7 +17,7 @@ import type { Note, NoteInput, NoteUpdate, Song, SongDetail, SongWithNotes } fro
 export const CHUNK_SECONDS = 30
 
 interface SongState {
-  songs: Song[]
+  songs: SongDetail[]
   current: SongWithNotes | null
   loadedChunks: number[]
   loadGeneration: number
@@ -143,11 +143,11 @@ const songSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchSongs.fulfilled, (state, action: PayloadAction<Song[]>) => {
+      .addCase(fetchSongs.fulfilled, (state, action: PayloadAction<SongDetail[]>) => {
         state.songs = action.payload
       })
       .addCase(createSong.fulfilled, (state, action: PayloadAction<Song>) => {
-        state.songs.unshift(action.payload)
+        state.songs.unshift({ ...action.payload, noteCount: 0, collaborators: [] })
       })
       .addCase(openSong.pending, (state) => {
         state.loading = true

@@ -5,6 +5,7 @@ import { toNoteEventDTO, toSongDTO, toSongWithNotesDTO } from './song.types'
 
 import { ApiError } from '~/core/http/ApiError'
 import { hub } from '~/core/realtime/hub'
+import { AuthRepo } from '~/modules/auth/auth.repo'
 import { toNoteDTO } from '~/modules/notes/note.types'
 
 export const SongService = {
@@ -13,9 +14,9 @@ export const SongService = {
     return toSongDTO(song)
   },
 
-  async list() {
-    const songs = await SongRepo.list()
-    return songs.map(toSongDTO)
+  async list(userId?: string) {
+    const songs = await SongRepo.list(userId ?? '')
+    return songs.map(toSongWithNotesDTO)
   },
 
   async getById(id: string, userId?: string) {
@@ -102,6 +103,17 @@ export const SongService = {
     })
 
     return dto
+  },
+
+  async invite(id: string, userId: string | undefined, email: string) {
+    await SongService.assertOwner(id, userId)
+
+    const invitee = await AuthRepo.findByEmail(email)
+    if (!invitee) throw ApiError.NotFound('No account is registered with that email')
+    if (invitee.id === userId) throw ApiError.BadRequest('You already own this song')
+
+    const collaborator = await SongRepo.recordCollaborator(id, invitee.id)
+    return { email: invitee.email, lastSeen: collaborator.lastSeen.toISOString() }
   },
 
   async remove(id: string, userId?: string, actor?: string) {
