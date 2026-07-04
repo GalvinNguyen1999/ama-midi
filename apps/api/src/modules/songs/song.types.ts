@@ -13,6 +13,7 @@ export interface SongDTO {
 }
 
 export interface CollaboratorDTO {
+  userId: string
   email: string
   lastSeen: string
 }
@@ -25,6 +26,7 @@ export interface SongWithNotesDTO extends SongDTO {
 type SongWithOwner = Song & { owner?: { email: string } | null }
 
 interface CollaboratorRow {
+  userId: string
   user: { email: string }
   lastSeen: Date
 }
@@ -62,10 +64,13 @@ export function toSongWithNotesDTO(s: SongDetail): SongWithNotesDTO {
   return {
     ...toSongDTO(s),
     noteCount: s._count.notes,
-    collaborators: s.collaborators.map((c) => ({
-      email: c.user.email,
-      lastSeen: c.lastSeen.toISOString(),
-    })),
+    collaborators: s.collaborators
+      .filter((c) => c.userId !== s.ownerId)
+      .map((c) => ({
+        userId: c.userId,
+        email: c.user.email,
+        lastSeen: c.lastSeen.toISOString(),
+      })),
   }
 }
 

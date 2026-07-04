@@ -54,6 +54,15 @@ export const SongController = {
     res.json(await SongService.invite(stringParam(req, 'id'), req.user?.id, email, req.user?.email))
   }),
 
+  removeCollaborator: asyncHandler(async (req: Request, res: Response) => {
+    await SongService.removeCollaborator(
+      stringParam(req, 'id'),
+      req.user?.id,
+      stringParam(req, 'userId'),
+    )
+    res.status(StatusCodes.NO_CONTENT).send()
+  }),
+
   remove: asyncHandler(async (req: Request, res: Response) => {
     await SongService.remove(stringParam(req, 'id'), req.user?.id, req.user?.email)
     res.status(StatusCodes.NO_CONTENT).send()

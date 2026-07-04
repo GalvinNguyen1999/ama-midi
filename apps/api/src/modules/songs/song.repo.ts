@@ -66,6 +66,14 @@ export const SongRepo = {
     })
   },
 
+  listCollaboratorIds(songId: string) {
+    return prisma.songCollaborator.findMany({ where: { songId }, select: { userId: true } })
+  },
+
+  removeCollaborator(songId: string, userId: string) {
+    return prisma.songCollaborator.deleteMany({ where: { songId, userId } })
+  },
+
   recordCollaborator(songId: string, userId: string) {
     const now = new Date()
     return prisma.songCollaborator.upsert({

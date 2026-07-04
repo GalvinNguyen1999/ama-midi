@@ -30,9 +30,42 @@ describe('SongService', () => {
 
   it('remove deletes when caller is the owner', async () => {
     mockedRepo.findById.mockResolvedValue({ id: 's1', ownerId: 'owner-1' } as never)
+    mockedRepo.listCollaboratorIds.mockResolvedValue([] as never)
     mockedRepo.remove.mockResolvedValue({} as never)
     await SongService.remove('s1', 'owner-1')
     expect(mockedRepo.remove).toHaveBeenCalledWith('s1')
+  })
+
+  it('removeCollaborator throws 403 when the caller is not the owner', async () => {
+    mockedRepo.findAccess.mockResolvedValue({ ownerId: 'owner-1', shareMode: 'edit' } as never)
+    await expect(SongService.removeCollaborator('s1', 'intruder', 'u2')).rejects.toMatchObject({
+      statusCode: 403,
+    })
+    expect(mockedRepo.removeCollaborator).not.toHaveBeenCalled()
+  })
+
+  it('removeCollaborator refuses to remove the owner', async () => {
+    mockedRepo.findAccess.mockResolvedValue({
+      ownerId: 'owner-1',
+      shareMode: 'edit',
+      title: 'Song',
+    } as never)
+    await expect(SongService.removeCollaborator('s1', 'owner-1', 'owner-1')).rejects.toMatchObject({
+      statusCode: 400,
+    })
+    expect(mockedRepo.removeCollaborator).not.toHaveBeenCalled()
+  })
+
+  it('removeCollaborator deletes the row when the caller is the owner', async () => {
+    mockedRepo.findAccess.mockResolvedValue({
+      ownerId: 'owner-1',
+      shareMode: 'edit',
+      title: 'Song',
+    } as never)
+    mockedRepo.removeCollaborator.mockResolvedValue({ count: 1 } as never)
+
+    await SongService.removeCollaborator('s1', 'owner-1', 'u2')
+    expect(mockedRepo.removeCollaborator).toHaveBeenCalledWith('s1', 'u2')
   })
 
   it('assertCanEdit throws 404 when the song is missing', async () => {

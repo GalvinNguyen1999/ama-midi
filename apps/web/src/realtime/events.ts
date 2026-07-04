@@ -14,5 +14,7 @@ export type ServerEvent =
       actor?: string
     }
   | { type: 'song.deleted'; songId: string; actor?: string }
+  | { type: 'song.removed'; songId: string }
+  | { type: 'access.revoked'; songId: string; title: string }
   | { type: 'invited'; songId: string; title: string; by: string }
   | { type: 'presence'; songId: string; users: PresenceUser[] }

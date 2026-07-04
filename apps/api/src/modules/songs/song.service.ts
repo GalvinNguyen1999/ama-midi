@@ -134,6 +134,9 @@ export const SongService = {
     if (song.ownerId && song.ownerId !== userId) {
       throw ApiError.Forbidden('Only the owner can delete this song')
     }
+
+    const members = await SongRepo.listCollaboratorIds(id)
+
     try {
       await SongRepo.remove(id)
     } catch (e) {
@@ -144,5 +147,20 @@ export const SongService = {
     }
 
     hub.broadcast(id, { type: 'song.deleted', songId: id, actor })
+    for (const member of members) hub.notifyUser(member.userId, { type: 'song.removed', songId: id })
+  },
+
+  async removeCollaborator(id: string, userId: string | undefined, targetUserId: string) {
+    const access = await SongRepo.findAccess(id)
+    if (!access) throw ApiError.NotFound('Song not found')
+    if (access.ownerId && access.ownerId !== userId) {
+      throw ApiError.Forbidden('Only the owner can remove collaborators')
+    }
+    if (targetUserId === access.ownerId) {
+      throw ApiError.BadRequest('The owner cannot be removed')
+    }
+
+    await SongRepo.removeCollaborator(id, targetUserId)
+    hub.notifyUser(targetUserId, { type: 'access.revoked', songId: id, title: access.title })
   },
 }

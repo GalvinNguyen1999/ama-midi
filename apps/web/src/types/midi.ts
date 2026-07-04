@@ -28,6 +28,7 @@ export interface PresenceUser {
 }
 
 export interface Collaborator {
+  userId: string
   email: string
   lastSeen: string
 }

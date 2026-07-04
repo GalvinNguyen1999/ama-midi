@@ -52,6 +52,10 @@ export const inviteCollaboratorApi = async (id: string, email: string): Promise<
   return data
 }
 
+export const removeCollaboratorApi = async (id: string, userId: string): Promise<void> => {
+  await authorizedAxiosInstance.delete(`/songs/${id}/collaborators/${userId}`)
+}
+
 export const getSongEvents = async (id: string): Promise<NoteEvent[]> => {
   const { data } = await authorizedAxiosInstance.get<NoteEvent[]>(`/songs/${id}/events`)
   return data

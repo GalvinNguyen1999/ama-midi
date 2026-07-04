@@ -140,6 +140,17 @@ const songSlice = createSlice({
       state.songs = state.songs.filter((s) => s.id !== action.payload.songId)
       if (state.current?.id === action.payload.songId) state.current = null
     },
+    applyCollaboratorRemoved(
+      state,
+      action: PayloadAction<{ songId: string; userId: string }>,
+    ) {
+      const { songId, userId } = action.payload
+      if (state.current?.id === songId) {
+        state.current.collaborators = state.current.collaborators.filter((c) => c.userId !== userId)
+      }
+      const row = state.songs.find((s) => s.id === songId)
+      if (row) row.collaborators = row.collaborators.filter((c) => c.userId !== userId)
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -207,6 +218,11 @@ const songSlice = createSlice({
   },
 })
 
-export const { applyNoteUpsert, applyNoteRemove, applySongUpdate, applySongRemoved } =
-  songSlice.actions
+export const {
+  applyNoteUpsert,
+  applyNoteRemove,
+  applySongUpdate,
+  applySongRemoved,
+  applyCollaboratorRemoved,
+} = songSlice.actions
 export default songSlice.reducer

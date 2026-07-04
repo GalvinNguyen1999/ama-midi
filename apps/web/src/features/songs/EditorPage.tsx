@@ -41,7 +41,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
-import { inviteCollaboratorApi, seedNotesApi } from '~/apis/midi'
+import { inviteCollaboratorApi, removeCollaboratorApi, seedNotesApi } from '~/apis/midi'
 import { DEFAULT_NOTE_COLOR } from '~/features/pianoRoll/config'
 import { PianoRoll } from '~/features/pianoRoll/PianoRoll'
 import { HistoryDrawer } from '~/features/songs/HistoryDrawer'
@@ -54,6 +54,7 @@ import { useWindowedNotes } from '~/features/songs/useWindowedNotes'
 import { useAppDispatch, useAppSelector } from '~/store/hooks'
 import {
   addNote,
+  applyCollaboratorRemoved,
   applyNoteUpsert,
   editNote,
   openSong,
@@ -113,6 +114,9 @@ export function EditorPage() {
   const isOwner = !current?.ownerId || current.ownerId === user?.id
   const canEdit = isOwner || current?.shareMode === 'edit'
   const readOnly = Boolean(current) && !canEdit
+  const collaborators = current
+    ? current.collaborators.filter((c) => c.userId !== current.ownerId)
+    : []
 
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -307,6 +311,17 @@ export function EditorPage() {
       // the axios interceptor surfaces the error message
     } finally {
       setInviting(false)
+    }
+  }
+
+  const handleRemoveCollaborator = async (collaboratorId: string, collaboratorEmail: string) => {
+    if (!current) return
+    try {
+      await removeCollaboratorApi(current.id, collaboratorId)
+      dispatch(applyCollaboratorRemoved({ songId: current.id, userId: collaboratorId }))
+      toast.success(`Removed ${collaboratorEmail}`)
+    } catch {
+      // the axios interceptor surfaces the error message
     }
   }
 
@@ -613,6 +628,39 @@ export function EditorPage() {
                       Invite
                     </Button>
                   </Stack>
+
+                  {collaborators.length > 0 ? (
+                    <Box sx={{ mt: 2 }}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: 'block', mb: 0.5 }}
+                      >
+                        People with access
+                      </Typography>
+                      <Stack spacing={0.5}>
+                        {collaborators.map((c) => (
+                          <Stack key={c.userId} direction="row" alignItems="center" spacing={1}>
+                            <Avatar sx={{ width: 24, height: 24, fontSize: 12 }}>
+                              {c.email.charAt(0).toUpperCase()}
+                            </Avatar>
+                            <Typography variant="body2" noWrap sx={{ flexGrow: 1, minWidth: 0 }}>
+                              {c.email}
+                            </Typography>
+                            <Tooltip title="Remove access">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleRemoveCollaborator(c.userId, c.email)}
+                              >
+                                <DeleteOutlineIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Stack>
+                        ))}
+                      </Stack>
+                    </Box>
+                  ) : null}
                 </>
               ) : null}
             </Popover>

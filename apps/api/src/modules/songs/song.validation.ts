@@ -25,3 +25,7 @@ export const inviteSchema = z.object({
   params: z.object({ id: z.uuid() }),
   body: z.object({ email: z.email() }),
 })
+
+export const removeCollaboratorSchema = z.object({
+  params: z.object({ id: z.uuid(), userId: z.uuid() }),
+})
