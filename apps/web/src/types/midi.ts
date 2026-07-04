@@ -50,3 +50,13 @@ export interface NoteInput {
 }
 
 export type NoteUpdate = Partial<NoteInput>
+
+export interface NoteEvent {
+  id: string
+  songId: string
+  noteId: string | null
+  type: 'CREATE' | 'UPDATE' | 'DELETE'
+  payload: { title?: string; track?: number; time?: number } | null
+  actor: string | null
+  createdAt: string
+}

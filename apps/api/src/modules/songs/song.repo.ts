@@ -44,6 +44,14 @@ export const SongRepo = {
     return prisma.song.update({ where: { id }, data: { shareMode }, include: ownerSelect })
   },
 
+  updateTitle(id: string, title: string) {
+    return prisma.song.update({
+      where: { id },
+      data: { title, version: { increment: 1 } },
+      include: ownerSelect,
+    })
+  },
+
   recordCollaborator(songId: string, userId: string) {
     const now = new Date()
     return prisma.songCollaborator.upsert({

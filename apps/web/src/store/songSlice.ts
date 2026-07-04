@@ -8,6 +8,7 @@ import {
   getNotesWindow,
   getSong,
   listSongs,
+  renameSongApi,
   setShareModeApi,
   updateNoteApi,
 } from '~/apis/midi'
@@ -93,6 +94,31 @@ export const setShareMode = createAsyncThunk(
   (args: { id: string; shareMode: 'edit' | 'view' }) => setShareModeApi(args.id, args.shareMode),
 )
 
+export const renameSong = createAsyncThunk('song/renameSong', (args: { id: string; title: string }) =>
+  renameSongApi(args.id, args.title),
+)
+
+interface SongPatch {
+  id: string
+  title?: string
+  shareMode?: 'edit' | 'view'
+  version?: number
+}
+
+function applySongPatch(state: SongState, patch: SongPatch) {
+  if (state.current?.id === patch.id) {
+    if (patch.title != null) state.current.title = patch.title
+    if (patch.shareMode != null) state.current.shareMode = patch.shareMode
+    if (patch.version != null) state.current.version = patch.version
+  }
+  const row = state.songs.find((s) => s.id === patch.id)
+  if (row) {
+    if (patch.title != null) row.title = patch.title
+    if (patch.shareMode != null) row.shareMode = patch.shareMode
+    if (patch.version != null) row.version = patch.version
+  }
+}
+
 const songSlice = createSlice({
   name: 'song',
   initialState,
@@ -102,6 +128,13 @@ const songSlice = createSlice({
     },
     applyNoteRemove(state, action: PayloadAction<{ songId: string; noteId: string }>) {
       removeNoteFromState(state, action.payload.songId, action.payload.noteId)
+    },
+    applySongUpdate(state, action: PayloadAction<SongPatch>) {
+      applySongPatch(state, action.payload)
+    },
+    applySongRemoved(state, action: PayloadAction<{ songId: string }>) {
+      state.songs = state.songs.filter((s) => s.id !== action.payload.songId)
+      if (state.current?.id === action.payload.songId) state.current = null
     },
   },
   extraReducers: (builder) => {
@@ -154,13 +187,22 @@ const songSlice = createSlice({
         if (state.current?.id === action.payload) state.current = null
       })
       .addCase(setShareMode.fulfilled, (state, action: PayloadAction<Song>) => {
-        const updated = action.payload
-        if (state.current?.id === updated.id) state.current.shareMode = updated.shareMode
-        const row = state.songs.find((s) => s.id === updated.id)
-        if (row) row.shareMode = updated.shareMode
+        applySongPatch(state, {
+          id: action.payload.id,
+          shareMode: action.payload.shareMode,
+          version: action.payload.version,
+        })
+      })
+      .addCase(renameSong.fulfilled, (state, action: PayloadAction<Song>) => {
+        applySongPatch(state, {
+          id: action.payload.id,
+          title: action.payload.title,
+          version: action.payload.version,
+        })
       })
   },
 })
 
-export const { applyNoteUpsert, applyNoteRemove } = songSlice.actions
+export const { applyNoteUpsert, applyNoteRemove, applySongUpdate, applySongRemoved } =
+  songSlice.actions
 export default songSlice.reducer

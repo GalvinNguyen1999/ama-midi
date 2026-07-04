@@ -15,3 +15,8 @@ export const setShareSchema = z.object({
   params: z.object({ id: z.uuid() }),
   body: z.object({ shareMode: z.enum(['edit', 'view']) }),
 })
+
+export const renameSongSchema = z.object({
+  params: z.object({ id: z.uuid() }),
+  body: z.object({ title: z.string().trim().min(1).max(120) }),
+})

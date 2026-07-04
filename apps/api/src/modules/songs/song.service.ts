@@ -4,6 +4,7 @@ import { SongRepo } from './song.repo'
 import { toNoteEventDTO, toSongDTO, toSongWithNotesDTO } from './song.types'
 
 import { ApiError } from '~/core/http/ApiError'
+import { hub } from '~/core/realtime/hub'
 import { toNoteDTO } from '~/modules/notes/note.types'
 
 export const SongService = {
@@ -50,17 +51,60 @@ export const SongService = {
     }
   },
 
-  async setShareMode(id: string, userId: string | undefined, shareMode: 'edit' | 'view') {
+  async assertOwner(songId: string, userId?: string) {
+    const access = await SongRepo.findAccess(songId)
+    if (!access) throw ApiError.NotFound('Song not found')
+    if (access.ownerId && access.ownerId !== userId) {
+      throw ApiError.Forbidden('Only the owner can change this song')
+    }
+  },
+
+  async setShareMode(
+    id: string,
+    userId: string | undefined,
+    shareMode: 'edit' | 'view',
+    actor?: string,
+  ) {
     const access = await SongRepo.findAccess(id)
     if (!access) throw ApiError.NotFound('Song not found')
     if (access.ownerId && access.ownerId !== userId) {
       throw ApiError.Forbidden('Only the owner can change sharing')
     }
     const song = await SongRepo.setShareMode(id, shareMode)
-    return toSongDTO(song)
+    const dto = toSongDTO(song)
+
+    hub.broadcast(id, {
+      type: 'song.updated',
+      songId: id,
+      title: dto.title,
+      shareMode: dto.shareMode,
+      version: dto.version,
+      change: 'share',
+      actor,
+    })
+
+    return dto
   },
 
-  async remove(id: string, userId?: string) {
+  async rename(id: string, userId: string | undefined, title: string, actor?: string) {
+    await SongService.assertOwner(id, userId)
+    const song = await SongRepo.updateTitle(id, title)
+    const dto = toSongDTO(song)
+
+    hub.broadcast(id, {
+      type: 'song.updated',
+      songId: id,
+      title: dto.title,
+      shareMode: dto.shareMode,
+      version: dto.version,
+      change: 'title',
+      actor,
+    })
+
+    return dto
+  },
+
+  async remove(id: string, userId?: string, actor?: string) {
     const song = await SongRepo.findById(id)
     if (!song) throw ApiError.NotFound('Song not found')
     if (song.ownerId && song.ownerId !== userId) {
@@ -74,5 +118,7 @@ export const SongService = {
       }
       throw e
     }
+
+    hub.broadcast(id, { type: 'song.deleted', songId: id, actor })
   },
 }

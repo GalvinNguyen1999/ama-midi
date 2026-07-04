@@ -1,6 +1,8 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import CircleIcon from '@mui/icons-material/Circle'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import EditIcon from '@mui/icons-material/Edit'
+import HistoryIcon from '@mui/icons-material/History'
 import LinkIcon from '@mui/icons-material/Link'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
@@ -42,6 +44,7 @@ import { toast } from 'react-toastify'
 import { seedNotesApi } from '~/apis/midi'
 import { DEFAULT_NOTE_COLOR } from '~/features/pianoRoll/config'
 import { PianoRoll } from '~/features/pianoRoll/PianoRoll'
+import { HistoryDrawer } from '~/features/songs/HistoryDrawer'
 import { NoteDialog, type NoteFormValues } from '~/features/songs/NoteDialog'
 import { OnboardingCallout } from '~/features/songs/OnboardingCallout'
 import { useEditorHistory, type NotePatch } from '~/features/songs/useEditorHistory'
@@ -56,6 +59,7 @@ import {
   openSong,
   removeNote,
   removeSong,
+  renameSong,
   setShareMode,
 } from '~/store/songSlice'
 import type { Note } from '~/types/midi'
@@ -99,7 +103,12 @@ export function EditorPage() {
   const [timbre, setTimbre] = useState<Timbre>('sine')
   const [loop, setLoop] = useState(false)
 
-  const { connected, presence } = useSongRealtime(id, user)
+  const { connected, presence } = useSongRealtime(id, user, {
+    onSongDeleted: (actor) => {
+      toast.info(`${actor ? actor.split('@')[0] : 'The owner'} deleted this song`)
+      navigate('/songs')
+    },
+  })
   const { playing, playhead, play, stop } = usePlayback(current?.notes ?? [], { timbre, loop })
   const isOwner = !current?.ownerId || current.ownerId === user?.id
   const canEdit = isOwner || current?.shareMode === 'edit'
@@ -109,6 +118,9 @@ export function EditorPage() {
   const [deleting, setDeleting] = useState(false)
   const [perfAnchor, setPerfAnchor] = useState<null | HTMLElement>(null)
   const [shareAnchor, setShareAnchor] = useState<null | HTMLElement>(null)
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState('')
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [seeding, setSeeding] = useState(false)
   const { scrollRef, onScroll, reload } = useWindowedNotes(id)
   const {
@@ -267,6 +279,20 @@ export function EditorPage() {
     }
   }
 
+  const startEditTitle = () => {
+    if (!current || !isOwner) return
+    setTitleDraft(current.title)
+    setEditingTitle(true)
+  }
+
+  const commitTitle = async () => {
+    setEditingTitle(false)
+    const title = titleDraft.trim()
+    if (!current || !title || title === current.title) return
+    const res = await dispatch(renameSong({ id: current.id, title }))
+    if (renameSong.fulfilled.match(res)) toast.success('Song renamed')
+  }
+
   const handleSetShare = async (mode: 'edit' | 'view') => {
     if (!current || current.shareMode === mode) return
     const res = await dispatch(setShareMode({ id: current.id, shareMode: mode }))
@@ -322,9 +348,33 @@ export function EditorPage() {
                 <ArrowBackIcon />
               </IconButton>
             </Tooltip>
-            <Typography variant="h6" fontWeight={700} noWrap sx={{ maxWidth: 260 }}>
-              {current?.title ?? 'Loading…'}
-            </Typography>
+            {editingTitle ? (
+              <TextField
+                autoFocus
+                size="small"
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                onBlur={commitTitle}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') commitTitle()
+                  if (e.key === 'Escape') setEditingTitle(false)
+                }}
+                sx={{ width: 260 }}
+              />
+            ) : (
+              <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
+                <Typography variant="h6" fontWeight={700} noWrap sx={{ maxWidth: 260 }}>
+                  {current?.title ?? 'Loading…'}
+                </Typography>
+                {current && isOwner ? (
+                  <Tooltip title="Rename song">
+                    <IconButton size="small" onClick={startEditTitle}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                ) : null}
+              </Stack>
+            )}
             {current ? (
               <Chip
                 size="small"
@@ -439,6 +489,13 @@ export function EditorPage() {
                 </Button>
               </Tooltip>
             ) : null}
+            {current ? (
+              <Tooltip title="Activity history">
+                <IconButton size="small" onClick={() => setHistoryOpen(true)}>
+                  <HistoryIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            ) : null}
             {current && isOwner ? (
               <Tooltip title="Delete song">
                 <IconButton color="error" size="small" onClick={() => setDeleteOpen(true)}>
@@ -509,6 +566,13 @@ export function EditorPage() {
                 </Button>
               </Stack>
             </Popover>
+
+            <HistoryDrawer
+              songId={id}
+              version={current?.version}
+              open={historyOpen}
+              onClose={() => setHistoryOpen(false)}
+            />
           </Stack>
         </Container>
       </Box>

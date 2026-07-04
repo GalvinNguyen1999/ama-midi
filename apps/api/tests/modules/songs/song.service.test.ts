@@ -84,6 +84,34 @@ describe('SongService', () => {
     expect(dto).toMatchObject({ id: 's1', shareMode: 'view' })
   })
 
+  it('rename throws 403 when the caller is not the owner', async () => {
+    mockedRepo.findAccess.mockResolvedValue({ ownerId: 'owner-1', shareMode: 'edit' } as never)
+    await expect(SongService.rename('s1', 'intruder', 'New')).rejects.toMatchObject({
+      statusCode: 403,
+    })
+    expect(mockedRepo.updateTitle).not.toHaveBeenCalled()
+  })
+
+  it('rename updates the title when the caller is the owner', async () => {
+    mockedRepo.findAccess.mockResolvedValue({ ownerId: 'owner-1', shareMode: 'view' } as never)
+    mockedRepo.updateTitle.mockResolvedValue({
+      id: 's1',
+      title: 'New',
+      bpm: 120,
+      version: 3,
+      shareMode: 'view',
+      ownerId: 'owner-1',
+      owner: { email: 'o@x.com' },
+      createdAt: new Date('2020-01-01T00:00:00Z'),
+      updatedAt: new Date('2020-01-01T00:00:00Z'),
+    } as never)
+
+    const dto = await SongService.rename('s1', 'owner-1', 'New')
+
+    expect(mockedRepo.updateTitle).toHaveBeenCalledWith('s1', 'New')
+    expect(dto).toMatchObject({ id: 's1', title: 'New' })
+  })
+
   it('getNotes maps repo rows to note DTOs within the requested range', async () => {
     mockedRepo.listNotes.mockResolvedValue([
       {
