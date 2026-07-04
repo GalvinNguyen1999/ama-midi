@@ -6,7 +6,7 @@ import type { SongWithNotes } from '~/types/midi'
 
 import { EditorToolbar } from './EditorToolbar'
 
-jest.mock('~/features/songs/HistoryDrawer', () => ({ HistoryDrawer: () => null }))
+jest.mock('~/features/songs/history/HistoryDrawer', () => ({ HistoryDrawer: () => null }))
 
 const current = {
   id: 's1',

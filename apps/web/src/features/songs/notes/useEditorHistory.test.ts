@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 
-import { useEditorHistory, type HistoryOps } from '~/features/songs/useEditorHistory'
+import { useEditorHistory, type HistoryOps } from '~/features/songs/notes/useEditorHistory'
 import type { Note } from '~/types/midi'
 
 function makeNote(id: string, track = 1, time = 0): Note {

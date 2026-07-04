@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react'
 
-import { useWindowedNotes } from '~/features/songs/useWindowedNotes'
+import { useWindowedNotes } from '~/features/songs/notes/useWindowedNotes'
 
 const mockDispatch = jest.fn()
 

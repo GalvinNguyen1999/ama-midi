@@ -1,6 +1,6 @@
 import { toast } from 'react-toastify'
 
-import { applySongEvent } from '~/features/songs/applySongEvent'
+import { applySongEvent } from '~/features/songs/realtime/applySongEvent'
 import type { ServerEvent } from '~/realtime/events'
 import type { Note } from '~/types/midi'
 

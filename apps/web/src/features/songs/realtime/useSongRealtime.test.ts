@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 
-import { useSongRealtime } from '~/features/songs/useSongRealtime'
+import { useSongRealtime } from '~/features/songs/realtime/useSongRealtime'
 import type { Note } from '~/types/midi'
 
 const mockDispatch = jest.fn()

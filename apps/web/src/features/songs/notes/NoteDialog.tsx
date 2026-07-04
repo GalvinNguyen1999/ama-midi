@@ -15,7 +15,7 @@ import { useEffect, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 
 import { TIME_MAX, TIME_MIN, TRACK_MAX, TRACK_MIN } from '~/features/pianoRoll/config'
-import { noteSchema, type NoteFormValues } from '~/features/songs/noteSchema'
+import { noteSchema, type NoteFormValues } from '~/features/songs/notes/noteSchema'
 
 export type { NoteFormValues }
 

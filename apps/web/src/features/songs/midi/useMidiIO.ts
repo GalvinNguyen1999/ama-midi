@@ -3,7 +3,7 @@ import type { ChangeEvent } from 'react'
 import { toast } from 'react-toastify'
 
 import { getAllNotes, importMidiApi } from '~/apis/midi'
-import { notesToMidi } from '~/features/songs/midi'
+import { notesToMidi } from '~/features/songs/midi/midi'
 import { useAppDispatch } from '~/store/hooks'
 import { openSong } from '~/store/songSlice'
 

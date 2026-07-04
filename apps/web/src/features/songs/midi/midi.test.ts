@@ -1,6 +1,6 @@
 import { Midi } from '@tonejs/midi'
 
-import { notesToMidi } from '~/features/songs/midi'
+import { notesToMidi } from '~/features/songs/midi/midi'
 import type { Note } from '~/types/midi'
 
 function note(track: number, time: number): Note {

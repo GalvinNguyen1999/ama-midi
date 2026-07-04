@@ -2,7 +2,7 @@ import { renderHook, act } from '@testing-library/react'
 import { toast } from 'react-toastify'
 
 import { getAllNotes, importMidiApi } from '~/apis/midi'
-import { notesToMidi } from '~/features/songs/midi'
+import { notesToMidi } from '~/features/songs/midi/midi'
 import { useAppDispatch } from '~/store/hooks'
 
 import { useMidiIO } from './useMidiIO'
@@ -12,7 +12,7 @@ jest.mock('~/apis/midi', () => ({
   importMidiApi: jest.fn(),
   getSong: jest.fn(),
 }))
-jest.mock('~/features/songs/midi', () => ({ notesToMidi: jest.fn() }))
+jest.mock('~/features/songs/midi/midi', () => ({ notesToMidi: jest.fn() }))
 jest.mock('~/store/hooks')
 jest.mock('react-toastify', () => ({
   toast: {

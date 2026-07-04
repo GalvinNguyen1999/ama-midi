@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 
-import { usePlayback } from '~/features/songs/usePlayback'
+import { usePlayback } from '~/features/songs/playback/usePlayback'
 import type { Note } from '~/types/midi'
 
 function makeNote(id: string, track: number, time: number): Note {

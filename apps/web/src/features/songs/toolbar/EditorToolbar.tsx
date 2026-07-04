@@ -37,12 +37,12 @@ import {
 } from '@mui/material'
 import type { ChangeEvent, MouseEvent, RefObject } from 'react'
 
-import { HistoryDrawer } from '~/features/songs/HistoryDrawer'
-import { SharePopover } from '~/features/songs/SharePopover'
-import type { Timbre } from '~/features/songs/usePlayback'
-import type { useSharing } from '~/features/songs/useSharing'
-import type { useSongActions } from '~/features/songs/useSongActions'
-import type { useSongTitle } from '~/features/songs/useSongTitle'
+import { HistoryDrawer } from '~/features/songs/history/HistoryDrawer'
+import { SharePopover } from '~/features/songs/sharing/SharePopover'
+import type { Timbre } from '~/features/songs/playback/usePlayback'
+import type { useSharing } from '~/features/songs/sharing/useSharing'
+import type { useSongActions } from '~/features/songs/toolbar/useSongActions'
+import type { useSongTitle } from '~/features/songs/toolbar/useSongTitle'
 import type { Collaborator, SongWithNotes } from '~/types/midi'
 
 interface Props {

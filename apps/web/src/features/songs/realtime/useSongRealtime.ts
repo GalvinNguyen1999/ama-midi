@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { applySongEvent } from '~/features/songs/applySongEvent'
+import { applySongEvent } from '~/features/songs/realtime/applySongEvent'
 import type { ServerEvent } from '~/realtime/events'
 import { useAppDispatch } from '~/store/hooks'
 import type { PresenceUser } from '~/types/midi'
