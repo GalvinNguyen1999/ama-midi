@@ -18,6 +18,8 @@ interface SongState {
   songs: Song[]
   current: SongWithNotes | null
   loadedChunks: number[]
+  loadGeneration: number
+  notesLoading: number
   loading: boolean
 }
 
@@ -25,6 +27,8 @@ const initialState: SongState = {
   songs: [],
   current: null,
   loadedChunks: [],
+  loadGeneration: 0,
+  notesLoading: 0,
   loading: false,
 }
 
@@ -51,10 +55,11 @@ export const openSong = createAsyncThunk('song/openSong', (id: string) => getSon
 
 export const loadNotes = createAsyncThunk(
   'song/loadNotes',
-  async (args: { songId: string; chunk: number }) => {
+  async (args: { songId: string; chunk: number }, { getState }) => {
+    const generation = (getState() as { song: SongState }).song.loadGeneration
     const from = args.chunk * CHUNK_SECONDS
     const notes = await getNotesWindow(args.songId, from, from + CHUNK_SECONDS)
-    return { songId: args.songId, chunk: args.chunk, notes }
+    return { songId: args.songId, chunk: args.chunk, notes, generation }
   },
 )
 
@@ -108,16 +113,26 @@ const songSlice = createSlice({
         state.loading = false
         state.current = { ...action.payload, notes: [] }
         state.loadedChunks = []
+        state.loadGeneration += 1
+        state.notesLoading = 0
       })
       .addCase(openSong.rejected, (state) => {
         state.loading = false
       })
+      .addCase(loadNotes.pending, (state) => {
+        state.notesLoading += 1
+      })
       .addCase(loadNotes.fulfilled, (state, action) => {
-        const { songId, chunk, notes } = action.payload
+        state.notesLoading = Math.max(0, state.notesLoading - 1)
+        const { songId, chunk, notes, generation } = action.payload
         if (!state.current || state.current.id !== songId) return
+        if (generation !== state.loadGeneration) return
         const existing = new Set(state.current.notes.map((n) => n.id))
         for (const n of notes) if (!existing.has(n.id)) state.current.notes.push(n)
         if (!state.loadedChunks.includes(chunk)) state.loadedChunks.push(chunk)
+      })
+      .addCase(loadNotes.rejected, (state) => {
+        state.notesLoading = Math.max(0, state.notesLoading - 1)
       })
       .addCase(addNote.fulfilled, (state, action: PayloadAction<Note>) => {
         upsertNote(state, action.payload)

@@ -20,6 +20,7 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  Paper,
   Stack,
   Tooltip,
   Typography,
@@ -63,6 +64,7 @@ export function EditorPage() {
 
   const current = useAppSelector((s) => s.song.current)
   const loading = useAppSelector((s) => s.song.loading)
+  const notesLoading = useAppSelector((s) => s.song.notesLoading)
 
   const { connected, presence } = useSongRealtime(id, user)
   const { playing, playhead, play, stop } = usePlayback(current?.notes ?? [])
@@ -72,7 +74,7 @@ export function EditorPage() {
   const [deleting, setDeleting] = useState(false)
   const [perfAnchor, setPerfAnchor] = useState<null | HTMLElement>(null)
   const [seeding, setSeeding] = useState(false)
-  const { scrollRef, onScroll, reload } = useWindowedNotes(id, current?.id)
+  const { scrollRef, onScroll, reload } = useWindowedNotes(id)
   const [dialog, setDialog] = useState<DialogState>({
     open: false,
     mode: 'create',
@@ -296,14 +298,41 @@ export function EditorPage() {
             <CircularProgress />
           </Box>
         ) : current ? (
-          <Box ref={scrollRef} onScroll={onScroll} sx={{ maxHeight: '72vh', overflow: 'auto' }}>
-            <PianoRoll
-              notes={current.notes}
-              onCreateAt={openCreate}
-              onSelectNote={openEdit}
-              onMoveNote={handleMoveNote}
-              playhead={playing ? playhead : null}
-            />
+          <Box sx={{ position: 'relative' }}>
+            <Box ref={scrollRef} onScroll={onScroll} sx={{ maxHeight: '72vh', overflow: 'auto' }}>
+              <PianoRoll
+                notes={current.notes}
+                onCreateAt={openCreate}
+                onSelectNote={openEdit}
+                onMoveNote={handleMoveNote}
+                playhead={playing ? playhead : null}
+                loading={notesLoading > 0}
+              />
+            </Box>
+
+            {notesLoading > 0 ? (
+              <Paper
+                elevation={4}
+                sx={{
+                  position: 'absolute',
+                  bottom: 16,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  px: 1.75,
+                  py: 0.75,
+                  borderRadius: 5,
+                  pointerEvents: 'none',
+                }}
+              >
+                <CircularProgress size={14} thickness={5} />
+                <Typography variant="caption" color="text.secondary">
+                  Loading notes…
+                </Typography>
+              </Paper>
+            ) : null}
           </Box>
         ) : (
           <Typography color="text.secondary">Song not found.</Typography>

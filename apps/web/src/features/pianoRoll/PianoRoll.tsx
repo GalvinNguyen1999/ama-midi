@@ -23,13 +23,14 @@ interface Props {
   onSelectNote: (note: Note) => void
   onMoveNote: (note: Note, track: number, time: number) => void
   playhead: number | null
+  loading?: boolean
 }
 
 const GRID_WIDTH = TRACK_COUNT * TRACK_WIDTH
 const TIME_LABEL_STEP = 30
 const ROW_PX = TIME_LABEL_STEP * PX_PER_SECOND
 
-export function PianoRoll({ notes, onCreateAt, onSelectNote, onMoveNote, playhead }: Props) {
+export function PianoRoll({ notes, onCreateAt, onSelectNote, onMoveNote, playhead, loading }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const playheadRef = useRef<HTMLDivElement | null>(null)
 
@@ -196,8 +197,14 @@ export function PianoRoll({ notes, onCreateAt, onSelectNote, onMoveNote, playhea
                 color: 'text.secondary',
               }}
             >
-              <Typography variant="h6">This song is empty</Typography>
-              <Typography variant="body2">Click anywhere on the grid to add your first note</Typography>
+              {loading ? (
+                <Typography variant="body2">Loading notes…</Typography>
+              ) : (
+                <>
+                  <Typography variant="h6">This song is empty</Typography>
+                  <Typography variant="body2">Click anywhere on the grid to add your first note</Typography>
+                </>
+              )}
             </Box>
           ) : null}
         </Box>
