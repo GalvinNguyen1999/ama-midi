@@ -69,7 +69,7 @@ export function usePlayback(notes: Note[], options: PlaybackOptions = {}): Playb
       ctxRef.current?.close().catch(() => undefined)
       const ctx = new AudioContext()
       ctxRef.current = ctx
-      offsetRef.current = Math.max(0, from)
+      offsetRef.current = typeof from === 'number' && Number.isFinite(from) ? Math.max(0, from) : 0
 
       const scheduleCycle = (at0: number) => {
         const timbre = optionsRef.current.timbre ?? 'sine'

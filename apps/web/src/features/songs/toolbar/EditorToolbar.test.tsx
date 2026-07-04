@@ -116,4 +116,26 @@ describe('EditorToolbar', () => {
     renderToolbar({ readOnly: true, canEdit: false })
     expect(screen.getByText(/view only/i)).toBeInTheDocument()
   })
+
+  it('Play triggers transport.play() with no arguments (not the click event)', async () => {
+    const play = jest.fn()
+    renderToolbar({
+      current: { ...current, notes: [{ id: 'n', track: 1, time: 0 }] },
+      transport: {
+        playing: false,
+        playhead: 0,
+        play,
+        stop: jest.fn(),
+        loop: false,
+        toggleLoop: jest.fn(),
+        timbre: 'sine' as const,
+        setTimbre: jest.fn(),
+        bpm: 120,
+        onCommitBpm: jest.fn(),
+      },
+    })
+    await userEvent.click(screen.getByRole('button', { name: 'Play' }))
+    expect(play).toHaveBeenCalledTimes(1)
+    expect(play.mock.calls[0]).toEqual([])
+  })
 })

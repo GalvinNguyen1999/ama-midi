@@ -256,7 +256,7 @@ export function EditorToolbar({
                 variant={transport.playing ? 'contained' : 'outlined'}
                 color={transport.playing ? 'error' : 'primary'}
                 startIcon={transport.playing ? <StopIcon /> : <PlayArrowIcon />}
-                onClick={transport.playing ? transport.stop : transport.play}
+                onClick={() => (transport.playing ? transport.stop() : transport.play())}
               >
                 {transport.playing ? `Stop · ${transport.playhead.toFixed(1)}s` : 'Play'}
               </Button>
