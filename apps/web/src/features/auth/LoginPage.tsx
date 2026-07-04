@@ -27,12 +27,15 @@ export function LoginPage() {
 
   const onSubmit = async (data: LoginValues) => {
     setBusy(true)
+
     try {
       const res = await loginApi(data.email, data.password)
+
       if ('requires2FA' in res) {
         setPending2FA(res.userId)
         return
       }
+
       storeSession(res)
       toast.success('Signed in')
       navigate('/')
@@ -43,9 +46,12 @@ export function LoginPage() {
 
   const onVerify = async () => {
     if (!pending2FA || code.length !== 6) return
+
     setBusy(true)
+
     try {
       const res = await verify2faApi(pending2FA, code)
+
       storeSession(res)
       toast.success('Signed in')
       navigate('/')

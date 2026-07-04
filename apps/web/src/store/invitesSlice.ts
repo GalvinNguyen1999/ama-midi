@@ -15,6 +15,7 @@ export const respondInvite = createAsyncThunk(
   'invites/respond',
   async (args: { songId: string; accept: boolean }) => {
     await respondInviteApi(args.songId, args.accept)
+
     return args
   },
 )

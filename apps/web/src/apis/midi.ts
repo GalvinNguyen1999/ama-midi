@@ -115,6 +115,7 @@ export const importMidiApi = async (
     file,
     { headers: { 'Content-Type': 'application/octet-stream' } },
   )
+
   return data
 }
 
@@ -123,5 +124,6 @@ export const seedNotesApi = async (songId: string, count: number): Promise<{ ins
     `/songs/${songId}/notes/seed`,
     { count },
   )
+
   return data
 }

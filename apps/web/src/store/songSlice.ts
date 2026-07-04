@@ -60,7 +60,9 @@ function removeNoteFromState(state: SongState, songId: string, noteId: string) {
   if (!state.current || state.current.id !== songId) return
 
   const before = state.current.notes.length
+
   state.current.notes = state.current.notes.filter((n) => n.id !== noteId)
+
   if (state.current.notes.length < before) state.current.noteCount -= 1
 }
 
@@ -72,8 +74,11 @@ export const loadNotes = createAsyncThunk(
   'song/loadNotes',
   async (args: { songId: string; chunk: number }, { getState }) => {
     const generation = (getState() as { song: SongState }).song.loadGeneration
+    
     const from = args.chunk * CHUNK_SECONDS
+
     const notes = await getNotesWindow(args.songId, from, from + CHUNK_SECONDS)
+
     return { songId: args.songId, chunk: args.chunk, notes, generation }
   },
 )
@@ -130,7 +135,9 @@ function applySongPatch(state: SongState, patch: SongPatch) {
     if (patch.version != null) state.current.version = patch.version
     if (patch.bpm != null) state.current.bpm = patch.bpm
   }
+
   const row = state.songs.find((s) => s.id === patch.id)
+
   if (row) {
     if (patch.title != null) row.title = patch.title
     if (patch.shareMode != null) row.shareMode = patch.shareMode
@@ -154,6 +161,7 @@ const songSlice = createSlice({
     },
     applySongRemoved(state, action: PayloadAction<{ songId: string }>) {
       state.songs = state.songs.filter((s) => s.id !== action.payload.songId)
+
       if (state.current?.id === action.payload.songId) state.current = null
     },
     applyCollaboratorRemoved(
@@ -164,7 +172,9 @@ const songSlice = createSlice({
       if (state.current?.id === songId) {
         state.current.collaborators = state.current.collaborators.filter((c) => c.userId !== userId)
       }
+
       const row = state.songs.find((s) => s.id === songId)
+
       if (row) row.collaborators = row.collaborators.filter((c) => c.userId !== userId)
     },
     applyCollaboratorUpsert(
@@ -172,13 +182,18 @@ const songSlice = createSlice({
       action: PayloadAction<{ songId: string; collaborator: Collaborator }>,
     ) {
       const { songId, collaborator } = action.payload
+
       const upsert = (list: Collaborator[]) => {
         const idx = list.findIndex((c) => c.userId === collaborator.userId)
+
         if (idx >= 0) list[idx] = collaborator
         else list.push(collaborator)
       }
+      
       if (state.current?.id === songId) upsert(state.current.collaborators)
+
       const row = state.songs.find((s) => s.id === songId)
+
       if (row) upsert(row.collaborators)
     },
   },
@@ -208,11 +223,17 @@ const songSlice = createSlice({
       })
       .addCase(loadNotes.fulfilled, (state, action) => {
         state.notesLoading = Math.max(0, state.notesLoading - 1)
+
         const { songId, chunk, notes, generation } = action.payload
+
         if (!state.current || state.current.id !== songId) return
+
         if (generation !== state.loadGeneration) return
+
         const existing = new Set(state.current.notes.map((n) => n.id))
+
         for (const n of notes) if (!existing.has(n.id)) state.current.notes.push(n)
+
         if (!state.loadedChunks.includes(chunk)) state.loadedChunks.push(chunk)
       })
       .addCase(loadNotes.rejected, (state) => {

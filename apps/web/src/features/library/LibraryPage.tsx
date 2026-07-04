@@ -76,7 +76,6 @@ function StatCard({ icon, label, value }: StatProps) {
 export function LibraryPage() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
-  const user = useMemo(readUser, [])
   const songs = useAppSelector((s) => s.song.songs)
 
   const [loading, setLoading] = useState(true)
@@ -88,13 +87,13 @@ export function LibraryPage() {
   const [deleteTarget, setDeleteTarget] = useState<Song | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  useEffect(() => {
-    dispatch(fetchSongs()).finally(() => setLoading(false))
-  }, [dispatch])
+  const user = useMemo(readUser, [])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
+
     if (!q) return songs
+
     return songs.filter(
       (s) => s.title.toLowerCase().includes(q) || (s.ownerEmail ?? '').toLowerCase().includes(q),
     )
@@ -102,25 +101,34 @@ export function LibraryPage() {
 
   const stats = useMemo(() => {
     const owned = songs.filter((s) => s.ownerId && s.ownerId === user?.id).length
+
     const shared = songs.filter((s) => s.ownerId && s.ownerId !== user?.id).length
+
     const latest = songs.reduce<string | null>(
       (acc, s) => (!acc || s.updatedAt > acc ? s.updatedAt : acc),
       null,
     )
+
     return { total: songs.length, owned, shared, latest }
   }, [songs, user])
 
   const handleCreate = async () => {
     if (creatingRef.current) return
+
     const title = newTitle.trim()
+
     if (!title) {
       toast.error('Song title is required')
       return
     }
+
     creatingRef.current = true
+
     setCreating(true)
+
     try {
       const res = await dispatch(createSong(title))
+
       if (createSong.fulfilled.match(res)) {
         toast.success(`Song “${title}” created`)
         setNewTitle('')
@@ -136,6 +144,7 @@ export function LibraryPage() {
   const handleDelete = async () => {
     if (!deleteTarget) return
     setDeleting(true)
+
     const res = await dispatch(removeSong(deleteTarget.id))
     setDeleting(false)
     if (removeSong.fulfilled.match(res)) toast.success('Song deleted')
@@ -144,6 +153,7 @@ export function LibraryPage() {
 
   const copyLink = async (id: string) => {
     const url = `${window.location.origin}/songs/${id}`
+
     try {
       await navigator.clipboard.writeText(url)
       toast.success('Invite link copied')
@@ -151,6 +161,10 @@ export function LibraryPage() {
       toast.info(url)
     }
   }
+
+  useEffect(() => {
+    dispatch(fetchSongs()).finally(() => setLoading(false))
+  }, [dispatch])
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>

@@ -12,9 +12,11 @@ const authorizedAxiosInstance = axios.create({
 authorizedAxiosInstance.interceptors.request.use(
   (config) => {
     const accessToken = localStorage.getItem('accessToken')
+
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`
     }
+
     return config
   },
   (error) => Promise.reject(error),
@@ -38,6 +40,7 @@ authorizedAxiosInstance.interceptors.response.use(
     if (status === 410 && originalRequest) {
       if (!refreshTokenPromise) {
         const refreshToken = localStorage.getItem('refreshToken')
+
         refreshTokenPromise = handleRefreshTokenApi(refreshToken)
           .then((res) => {
             const accessToken = (res.data as { accessToken: string }).accessToken

@@ -25,9 +25,11 @@ import { readUser } from '~/utils/session'
 
 export function AppShell() {
   const navigate = useNavigate()
+
   const user = useMemo(readUser, [])
-  const email = user?.email ?? ''
   const [anchor, setAnchor] = useState<null | HTMLElement>(null)
+
+  const email = user?.email ?? ''
 
   useUserNotifications(user?.id)
 

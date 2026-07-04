@@ -12,17 +12,21 @@ import { registerSchema, type RegisterValues } from '~/features/auth/schemas'
 
 export function RegisterPage() {
   const navigate = useNavigate()
+
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<RegisterValues>({ resolver: zodResolver(registerSchema) })
+
   const [busy, setBusy] = useState(false)
 
   const onSubmit = async (data: RegisterValues) => {
     setBusy(true)
+
     try {
       const res = await registerApi(data.email, data.password)
+
       storeSession(res)
       toast.success('Account created')
       navigate('/')

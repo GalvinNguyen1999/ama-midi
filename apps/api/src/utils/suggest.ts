@@ -24,17 +24,22 @@ function sampleWeighted(dist: Map<number, number>, rng: () => number): number | 
   const entries = [...dist.entries()]
 
   if (entries.length === 0) return null
+
   const total = entries.reduce((sum, [, count]) => sum + count, 0)
+
   let r = rng() * total
+
   for (const [track, count] of entries) {
     r -= count
     if (r <= 0) return track
   }
+
   return entries[entries.length - 1][0]
 }
 
 function topColor(colors: Map<string, number> | undefined, fallback: string): string {
   if (!colors) return fallback
+
   return [...colors.entries()].sort((a, b) => b[1] - a[1])[0][0]
 }
 
@@ -60,44 +65,62 @@ export function suggestNotes(notes: SuggestNote[], options: Options = {}): Sugge
 
   for (let i = 0; i < sorted.length; i++) {
     const note = sorted[i]
+
     const colors = colorByTrack.get(note.track) ?? new Map<string, number>()
+
     colors.set(note.color, (colors.get(note.color) ?? 0) + 1)
+
     colorByTrack.set(note.track, colors)
 
     if (i > 0) {
       const prev = sorted[i - 1]
+
       const next = transitions.get(prev.track) ?? new Map<number, number>()
+
       next.set(note.track, (next.get(note.track) ?? 0) + 1)
+
       transitions.set(prev.track, next)
+
       if (note.time > prev.time) deltas.push(note.time - prev.time)
     }
   }
 
   const step = Math.max(0.1, round3(median(deltas)))
+
   const taken = new Set(notes.map((n) => `${n.track}:${n.time}`))
+
   const phrase: SuggestNote[] = []
+
   let current = sorted[sorted.length - 1]
 
   for (let i = 0; i < count; i++) {
     const time = round3(current.time + step)
+
     if (time > TIME_MAX) break
 
     let track: number | null = null
+
     for (let attempt = 0; attempt < TRACK_MAX; attempt++) {
       const candidate =
         sampleWeighted(transitions.get(current.track) ?? new Map(), rng) ??
         1 + Math.floor(rng() * TRACK_MAX)
+
       if (!taken.has(`${candidate}:${time}`)) {
         track = candidate
         break
       }
     }
+
     if (track == null) break
 
     const color = topColor(colorByTrack.get(track), current.color || DEFAULT_NOTE_COLOR)
+
     const note = { track, time, color }
+
     phrase.push(note)
+
     taken.add(`${track}:${time}`)
+
     current = note
   }
 
