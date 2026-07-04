@@ -41,16 +41,16 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
 import { seedNotesApi } from '~/apis/midi'
-import { DEFAULT_NOTE_COLOR } from '~/features/pianoRoll/config'
 import { PianoRoll } from '~/features/pianoRoll/PianoRoll'
 import { DeleteSongDialog } from '~/features/songs/DeleteSongDialog'
 import { HistoryDrawer } from '~/features/songs/HistoryDrawer'
-import { NoteDialog, type NoteFormValues } from '~/features/songs/NoteDialog'
+import { NoteDialog } from '~/features/songs/NoteDialog'
 import { OnboardingCallout } from '~/features/songs/OnboardingCallout'
 import { SharePopover } from '~/features/songs/SharePopover'
 import { SuggestionBar } from '~/features/songs/SuggestionBar'
-import { useEditorHistory, type NotePatch } from '~/features/songs/useEditorHistory'
+import { useEditorHistory } from '~/features/songs/useEditorHistory'
 import { useMidiIO } from '~/features/songs/useMidiIO'
+import { useNoteEditing, toPatch } from '~/features/songs/useNoteEditing'
 import { usePlayback, type Timbre } from '~/features/songs/usePlayback'
 import { useSharing } from '~/features/songs/useSharing'
 import { useSongRealtime } from '~/features/songs/useSongRealtime'
@@ -58,41 +58,8 @@ import { useSongTitle } from '~/features/songs/useSongTitle'
 import { useSuggestions } from '~/features/songs/useSuggestions'
 import { useWindowedNotes } from '~/features/songs/useWindowedNotes'
 import { useAppDispatch, useAppSelector } from '~/store/hooks'
-import {
-  addNote,
-  applyNoteUpsert,
-  editNote,
-  openSong,
-  removeNote,
-  removeSong,
-} from '~/store/songSlice'
-import type { Note } from '~/types/midi'
+import { addNote, editNote, openSong, removeNote, removeSong } from '~/store/songSlice'
 import { readUser } from '~/utils/session'
-
-interface DialogState {
-  open: boolean
-  mode: 'create' | 'edit'
-  note: Note | null
-  values: NoteFormValues
-}
-
-const emptyValues: NoteFormValues = {
-  title: '',
-  description: '',
-  track: 1,
-  time: 0,
-  color: DEFAULT_NOTE_COLOR,
-}
-
-function toPatch(note: Note): NotePatch {
-  return {
-    title: note.title,
-    description: note.description ?? undefined,
-    track: note.track,
-    time: note.time,
-    color: note.color,
-  }
-}
 
 export function EditorPage() {
   const dispatch = useAppDispatch()
@@ -161,12 +128,7 @@ export function EditorPage() {
     bpm: current?.bpm ?? 120,
     reload,
   })
-  const [dialog, setDialog] = useState<DialogState>({
-    open: false,
-    mode: 'create',
-    note: null,
-    values: emptyValues,
-  })
+  const notes = useNoteEditing(current, recordHistory)
 
   useEffect(() => {
     if (id) dispatch(openSong(id))
@@ -228,94 +190,6 @@ export function EditorPage() {
       toast.dismiss(toastId)
     } finally {
       setSeeding(false)
-    }
-  }
-
-  const handleMoveNote = async (note: Note, track: number, time: number) => {
-    dispatch(applyNoteUpsert({ ...note, track, time }))
-    const res = await dispatch(editNote({ id: note.id, input: { track, time } }))
-    if (editNote.rejected.match(res)) {
-      dispatch(applyNoteUpsert(note))
-      return
-    }
-    recordHistory({
-      kind: 'update',
-      id: note.id,
-      before: toPatch(note),
-      after: toPatch({ ...note, track, time }),
-    })
-  }
-
-  const openCreate = (track: number, time: number) =>
-    setDialog({ open: true, mode: 'create', note: null, values: { ...emptyValues, track, time } })
-
-  const openEdit = (note: Note) =>
-    setDialog({
-      open: true,
-      mode: 'edit',
-      note,
-      values: {
-        title: note.title,
-        description: note.description ?? '',
-        track: note.track,
-        time: note.time,
-        color: note.color,
-      },
-    })
-
-  const closeDialog = () => setDialog((d) => ({ ...d, open: false }))
-
-  const submitDialog = async (values: NoteFormValues) => {
-    if (!current) return
-    const input = {
-      title: values.title,
-      description: values.description || undefined,
-      track: values.track,
-      time: values.time,
-      color: values.color,
-    }
-    closeDialog()
-    if (dialog.mode === 'create') {
-      const res = await dispatch(addNote({ songId: current.id, input }))
-      if (addNote.fulfilled.match(res)) {
-        toast.success('Note added')
-        recordHistory({ kind: 'create', note: res.payload })
-      }
-    } else if (dialog.note) {
-      const before = toPatch(dialog.note)
-      const res = await dispatch(editNote({ id: dialog.note.id, input }))
-      if (editNote.fulfilled.match(res)) {
-        toast.success('Note updated')
-        recordHistory({ kind: 'update', id: dialog.note.id, before, after: toPatch(res.payload) })
-      }
-    }
-  }
-
-  const handleDeleteMany = async (ids: string[]) => {
-    if (!current) return
-    const targets = current.notes.filter((n) => ids.includes(n.id))
-    if (targets.length === 0) return
-
-    let deleted = 0
-    for (const note of targets) {
-      const res = await dispatch(removeNote(note.id))
-      if (removeNote.fulfilled.match(res)) {
-        recordHistory({ kind: 'delete', note })
-        deleted += 1
-      }
-    }
-    if (deleted > 0) toast.success(`Deleted ${deleted} note${deleted > 1 ? 's' : ''}`)
-  }
-
-  const handleDeleteNote = async () => {
-    const note = dialog.note
-    closeDialog()
-    if (note) {
-      const res = await dispatch(removeNote(note.id))
-      if (removeNote.fulfilled.match(res)) {
-        toast.success('Note deleted')
-        recordHistory({ kind: 'delete', note })
-      }
     }
   }
 
@@ -616,10 +490,10 @@ export function EditorPage() {
             <Box ref={scrollRef} onScroll={onScroll} sx={{ maxHeight: '72vh', overflow: 'auto' }}>
               <PianoRoll
                 notes={current.notes}
-                onCreateAt={openCreate}
-                onSelectNote={openEdit}
-                onMoveNote={handleMoveNote}
-                onDeleteMany={handleDeleteMany}
+                onCreateAt={notes.openCreate}
+                onSelectNote={notes.openEdit}
+                onMoveNote={notes.moveNote}
+                onDeleteMany={notes.deleteMany}
                 playhead={playing ? playhead : null}
                 loading={notesLoading > 0}
                 readOnly={readOnly}
@@ -677,12 +551,12 @@ export function EditorPage() {
       />
 
       <NoteDialog
-        open={dialog.open}
-        mode={dialog.mode}
-        initial={dialog.values}
-        onClose={closeDialog}
-        onSubmit={submitDialog}
-        onDelete={handleDeleteNote}
+        open={notes.dialog.open}
+        mode={notes.dialog.mode}
+        initial={notes.dialog.values}
+        onClose={notes.closeDialog}
+        onSubmit={notes.submit}
+        onDelete={notes.deleteNote}
       />
     </>
   )
