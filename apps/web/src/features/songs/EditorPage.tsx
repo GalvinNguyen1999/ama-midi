@@ -40,29 +40,21 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import type { ChangeEvent } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
-import {
-  getAllNotes,
-  getSuggestionsApi,
-  importMidiApi,
-  inviteCollaboratorApi,
-  removeCollaboratorApi,
-  seedNotesApi,
-  type SuggestedNote,
-} from '~/apis/midi'
+import { inviteCollaboratorApi, removeCollaboratorApi, seedNotesApi } from '~/apis/midi'
 import { DEFAULT_NOTE_COLOR } from '~/features/pianoRoll/config'
 import { PianoRoll } from '~/features/pianoRoll/PianoRoll'
 import { HistoryDrawer } from '~/features/songs/HistoryDrawer'
-import { notesToMidi } from '~/features/songs/midi'
 import { NoteDialog, type NoteFormValues } from '~/features/songs/NoteDialog'
 import { OnboardingCallout } from '~/features/songs/OnboardingCallout'
 import { useEditorHistory, type NotePatch } from '~/features/songs/useEditorHistory'
+import { useMidiIO } from '~/features/songs/useMidiIO'
 import { usePlayback, type Timbre } from '~/features/songs/usePlayback'
 import { useSongRealtime } from '~/features/songs/useSongRealtime'
+import { useSuggestions } from '~/features/songs/useSuggestions'
 import { useWindowedNotes } from '~/features/songs/useWindowedNotes'
 import { useAppDispatch, useAppSelector } from '~/store/hooks'
 import {
@@ -141,12 +133,6 @@ export function EditorPage() {
   const [historyOpen, setHistoryOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviting, setInviting] = useState(false)
-  const [exporting, setExporting] = useState(false)
-  const [importing, setImporting] = useState(false)
-  const [suggesting, setSuggesting] = useState(false)
-  const [acceptingAll, setAcceptingAll] = useState(false)
-  const [suggestions, setSuggestions] = useState<SuggestedNote[]>([])
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const [seeding, setSeeding] = useState(false)
   const { scrollRef, onScroll, reload } = useWindowedNotes(id)
   const {
@@ -171,6 +157,16 @@ export function EditorPage() {
       return editNote.fulfilled.match(res)
     },
   })
+  const { suggestions, suggesting, acceptingAll, suggest, accept, acceptAll, clear } = useSuggestions(
+    current?.id,
+    (note) => recordHistory({ kind: 'create', note }),
+  )
+  const { exporting, importing, fileInputRef, exportMidi, importMidi, onFile } = useMidiIO({
+    songId: current?.id,
+    title: current?.title ?? '',
+    bpm: current?.bpm ?? 120,
+    reload,
+  })
   const [dialog, setDialog] = useState<DialogState>({
     open: false,
     mode: 'create',
@@ -188,7 +184,6 @@ export function EditorPage() {
 
   useEffect(() => {
     resetHistory()
-    setSuggestions([])
   }, [id, resetHistory])
 
   useEffect(() => {
@@ -340,117 +335,6 @@ export function EditorPage() {
       // the axios interceptor surfaces the error message
     } finally {
       setInviting(false)
-    }
-  }
-
-  const handleSuggest = async () => {
-    if (!current) return
-    setSuggesting(true)
-    try {
-      const res = await getSuggestionsApi(current.id)
-      setSuggestions(res)
-      if (res.length === 0) toast.info('No suggestion available yet')
-    } catch {
-      // interceptor surfaces the error
-    } finally {
-      setSuggesting(false)
-    }
-  }
-
-  const acceptSuggestion = async (s: SuggestedNote) => {
-    if (!current || acceptingAll) return
-    const res = await dispatch(
-      addNote({ songId: current.id, input: { title: 'Note', track: s.track, time: s.time, color: s.color } }),
-    )
-    if (addNote.fulfilled.match(res)) {
-      recordHistory({ kind: 'create', note: res.payload })
-      setSuggestions((prev) => prev.filter((x) => !(x.track === s.track && x.time === s.time)))
-      toast.success('Note added')
-    }
-  }
-
-  const acceptAllSuggestions = async () => {
-    if (!current || suggestions.length === 0 || acceptingAll) return
-    setAcceptingAll(true)
-    try {
-      let added = 0
-      for (const s of suggestions) {
-        const res = await dispatch(
-          addNote({
-            songId: current.id,
-            input: { title: 'Note', track: s.track, time: s.time, color: s.color },
-          }),
-        )
-        if (addNote.fulfilled.match(res)) {
-          recordHistory({ kind: 'create', note: res.payload })
-          added += 1
-        }
-      }
-      setSuggestions([])
-      if (added > 0) toast.success(`Added ${added} suggested note${added > 1 ? 's' : ''}`)
-    } finally {
-      setAcceptingAll(false)
-    }
-  }
-
-  const handleExport = async () => {
-    if (!current) return
-    setExporting(true)
-    const toastId = toast.loading('Preparing MIDI…')
-    try {
-      const notes = await getAllNotes(current.id)
-      if (notes.length === 0) {
-        toast.update(toastId, {
-          render: 'This song has no notes to export',
-          type: 'info',
-          isLoading: false,
-          autoClose: 3000,
-        })
-        return
-      }
-      const bytes = new Uint8Array(notesToMidi(notes, current.bpm))
-      const blob = new Blob([bytes], { type: 'audio/midi' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `${current.title || 'song'}.mid`
-      link.click()
-      URL.revokeObjectURL(url)
-      toast.update(toastId, {
-        render: 'MIDI exported',
-        type: 'success',
-        isLoading: false,
-        autoClose: 2000,
-      })
-    } catch {
-      toast.dismiss(toastId)
-    } finally {
-      setExporting(false)
-    }
-  }
-
-  const handleImportFile = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file || !current) return
-
-    setImporting(true)
-    const toastId = toast.loading('Importing MIDI…')
-    try {
-      const buffer = await file.arrayBuffer()
-      const res = await importMidiApi(current.id, buffer)
-      await dispatch(openSong(current.id))
-      reload()
-      toast.update(toastId, {
-        render: `Imported ${res.inserted.toLocaleString()} notes`,
-        type: 'success',
-        isLoading: false,
-        autoClose: 2500,
-      })
-    } catch {
-      toast.dismiss(toastId)
-    } finally {
-      setImporting(false)
     }
   }
 
@@ -612,7 +496,7 @@ export function EditorPage() {
                 </Tooltip>
                 <Tooltip title="Suggest the next note (AI)">
                   <span>
-                    <IconButton size="small" color="secondary" onClick={handleSuggest} disabled={suggesting}>
+                    <IconButton size="small" color="secondary" onClick={suggest} disabled={suggesting}>
                       <AutoAwesomeIcon fontSize="small" />
                     </IconButton>
                   </span>
@@ -671,7 +555,7 @@ export function EditorPage() {
             {current ? (
               <Tooltip title="Export as MIDI (.mid)">
                 <span>
-                  <IconButton size="small" onClick={handleExport} disabled={exporting}>
+                  <IconButton size="small" onClick={exportMidi} disabled={exporting}>
                     <FileDownloadIcon fontSize="small" />
                   </IconButton>
                 </span>
@@ -680,11 +564,7 @@ export function EditorPage() {
             {current && canEdit ? (
               <Tooltip title="Import a MIDI file (.mid)">
                 <span>
-                  <IconButton
-                    size="small"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={importing}
-                  >
+                  <IconButton size="small" onClick={importMidi} disabled={importing}>
                     <FileUploadIcon fontSize="small" />
                   </IconButton>
                 </span>
@@ -695,7 +575,7 @@ export function EditorPage() {
               type="file"
               accept=".mid,.midi,audio/midi,audio/x-midi"
               style={{ display: 'none' }}
-              onChange={handleImportFile}
+              onChange={onFile}
             />
             {current ? (
               <Tooltip title="Activity history">
@@ -880,7 +760,7 @@ export function EditorPage() {
                 loading={notesLoading > 0}
                 readOnly={readOnly}
                 suggestions={canEdit ? suggestions : []}
-                onAcceptSuggestion={acceptSuggestion}
+                onAcceptSuggestion={accept}
               />
             </Box>
 
@@ -928,27 +808,13 @@ export function EditorPage() {
                 <Typography variant="caption" color="text.secondary">
                   {suggestions.length} suggested — click a ghost, or
                 </Typography>
-                <Button
-                  size="small"
-                  variant="contained"
-                  onClick={acceptAllSuggestions}
-                  loading={acceptingAll}
-                >
+                <Button size="small" variant="contained" onClick={acceptAll} loading={acceptingAll}>
                   Accept all
                 </Button>
-                <Button
-                  size="small"
-                  onClick={handleSuggest}
-                  disabled={suggesting || acceptingAll}
-                >
+                <Button size="small" onClick={suggest} disabled={suggesting || acceptingAll}>
                   Another
                 </Button>
-                <Button
-                  size="small"
-                  color="inherit"
-                  onClick={() => setSuggestions([])}
-                  disabled={acceptingAll}
-                >
+                <Button size="small" color="inherit" onClick={clear} disabled={acceptingAll}>
                   Dismiss
                 </Button>
               </Paper>
