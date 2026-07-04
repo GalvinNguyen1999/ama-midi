@@ -35,15 +35,48 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
-import type { ChangeEvent, MouseEvent, RefObject } from 'react'
+import { useState } from 'react'
+import type { ChangeEvent, RefObject } from 'react'
 
 import { HistoryDrawer } from '~/features/songs/history/HistoryDrawer'
 import { SharePopover } from '~/features/songs/sharing/SharePopover'
-import type { Timbre } from '~/features/songs/playback/usePlayback'
 import type { useSharing } from '~/features/songs/sharing/useSharing'
+import type { Timbre } from '~/features/songs/playback/usePlayback'
 import type { useSongActions } from '~/features/songs/toolbar/useSongActions'
 import type { useSongTitle } from '~/features/songs/toolbar/useSongTitle'
 import type { Collaborator, SongWithNotes } from '~/types/midi'
+
+interface Transport {
+  playing: boolean
+  playhead: number
+  play: () => void
+  stop: () => void
+  loop: boolean
+  toggleLoop: () => void
+  timbre: Timbre
+  setTimbre: (t: Timbre) => void
+}
+
+interface ToolbarHistory {
+  undo: () => void
+  redo: () => void
+  canUndo: boolean
+  canRedo: boolean
+}
+
+interface ToolbarMidi {
+  fileInputRef: RefObject<HTMLInputElement | null>
+  onFile: (e: ChangeEvent<HTMLInputElement>) => void
+  exportMidi: () => void
+  exporting: boolean
+  importMidi: () => void
+  importing: boolean
+}
+
+interface ToolbarSuggestions {
+  suggest: () => void
+  suggesting: boolean
+}
 
 interface Props {
   songId: string | undefined
@@ -56,44 +89,15 @@ interface Props {
   presence: { id: string; email: string }[]
   collaborators: Collaborator[]
   onBack: () => void
+  showDevTools: boolean
 
   title: ReturnType<typeof useSongTitle>
   sharing: ReturnType<typeof useSharing>
   songActions: ReturnType<typeof useSongActions>
-
-  undo: () => void
-  redo: () => void
-  canUndo: boolean
-  canRedo: boolean
-
-  suggest: () => void
-  suggesting: boolean
-
-  playing: boolean
-  playhead: number
-  onPlay: () => void
-  onStop: () => void
-  loop: boolean
-  onToggleLoop: () => void
-  timbre: Timbre
-  onTimbreChange: (t: Timbre) => void
-
-  fileInputRef: RefObject<HTMLInputElement | null>
-  onFile: (e: ChangeEvent<HTMLInputElement>) => void
-  exportMidi: () => void
-  exporting: boolean
-  importMidi: () => void
-  importing: boolean
-
-  moreAnchor: HTMLElement | null
-  onOpenMore: (e: MouseEvent<HTMLElement>) => void
-  onCloseMore: () => void
-
-  historyOpen: boolean
-  onOpenHistory: () => void
-  onCloseHistory: () => void
-
-  showDevTools: boolean
+  transport: Transport
+  history: ToolbarHistory
+  midi: ToolbarMidi
+  suggestions: ToolbarSuggestions
 }
 
 export function EditorToolbar({
@@ -107,37 +111,19 @@ export function EditorToolbar({
   presence,
   collaborators,
   onBack,
+  showDevTools,
   title,
   sharing,
   songActions,
-  undo,
-  redo,
-  canUndo,
-  canRedo,
-  suggest,
-  suggesting,
-  playing,
-  playhead,
-  onPlay,
-  onStop,
-  loop,
-  onToggleLoop,
-  timbre,
-  onTimbreChange,
-  fileInputRef,
-  onFile,
-  exportMidi,
-  exporting,
-  importMidi,
-  importing,
-  moreAnchor,
-  onOpenMore,
-  onCloseMore,
-  historyOpen,
-  onOpenHistory,
-  onCloseHistory,
-  showDevTools,
+  transport,
+  history,
+  midi,
+  suggestions,
 }: Props) {
+  const [moreAnchor, setMoreAnchor] = useState<null | HTMLElement>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const closeMore = () => setMoreAnchor(null)
+
   return (
     <Box
       sx={{
@@ -234,21 +220,26 @@ export function EditorToolbar({
             <>
               <Tooltip title="Undo (⌘Z)">
                 <span>
-                  <IconButton size="small" onClick={undo} disabled={!canUndo}>
+                  <IconButton size="small" onClick={history.undo} disabled={!history.canUndo}>
                     <UndoIcon fontSize="small" />
                   </IconButton>
                 </span>
               </Tooltip>
               <Tooltip title="Redo (⇧⌘Z)">
                 <span>
-                  <IconButton size="small" onClick={redo} disabled={!canRedo}>
+                  <IconButton size="small" onClick={history.redo} disabled={!history.canRedo}>
                     <RedoIcon fontSize="small" />
                   </IconButton>
                 </span>
               </Tooltip>
               <Tooltip title="Suggest the next note (AI)">
                 <span>
-                  <IconButton size="small" color="secondary" onClick={suggest} disabled={suggesting}>
+                  <IconButton
+                    size="small"
+                    color="secondary"
+                    onClick={suggestions.suggest}
+                    disabled={suggestions.suggesting}
+                  >
                     <AutoAwesomeIcon fontSize="small" />
                   </IconButton>
                 </span>
@@ -259,19 +250,19 @@ export function EditorToolbar({
             <>
               <Button
                 size="small"
-                variant={playing ? 'contained' : 'outlined'}
-                color={playing ? 'error' : 'primary'}
-                startIcon={playing ? <StopIcon /> : <PlayArrowIcon />}
-                onClick={playing ? onStop : onPlay}
+                variant={transport.playing ? 'contained' : 'outlined'}
+                color={transport.playing ? 'error' : 'primary'}
+                startIcon={transport.playing ? <StopIcon /> : <PlayArrowIcon />}
+                onClick={transport.playing ? transport.stop : transport.play}
               >
-                {playing ? `Stop · ${playhead.toFixed(1)}s` : 'Play'}
+                {transport.playing ? `Stop · ${transport.playhead.toFixed(1)}s` : 'Play'}
               </Button>
               <Tooltip title="Loop playback">
                 <ToggleButton
                   value="loop"
                   size="small"
-                  selected={loop}
-                  onChange={onToggleLoop}
+                  selected={transport.loop}
+                  onChange={transport.toggleLoop}
                   sx={{ px: 1, py: 0.5 }}
                 >
                   <RepeatIcon fontSize="small" />
@@ -280,8 +271,8 @@ export function EditorToolbar({
               <Tooltip title="Instrument tone">
                 <Select
                   size="small"
-                  value={timbre}
-                  onChange={(e) => onTimbreChange(e.target.value as Timbre)}
+                  value={transport.timbre}
+                  onChange={(e) => transport.setTimbre(e.target.value as Timbre)}
                   sx={{ '& .MuiSelect-select': { py: 0.5 } }}
                 >
                   <MenuItem value="sine">Sine</MenuItem>
@@ -302,26 +293,30 @@ export function EditorToolbar({
           {current ? (
             <Tooltip title="More actions">
               <span>
-                <IconButton size="small" onClick={onOpenMore} disabled={songActions.seeding}>
+                <IconButton
+                  size="small"
+                  onClick={(e) => setMoreAnchor(e.currentTarget)}
+                  disabled={songActions.seeding}
+                >
                   {songActions.seeding ? <CircularProgress size={18} /> : <MoreVertIcon />}
                 </IconButton>
               </span>
             </Tooltip>
           ) : null}
           <input
-            ref={fileInputRef}
+            ref={midi.fileInputRef}
             type="file"
             accept=".mid,.midi,audio/midi,audio/x-midi"
             style={{ display: 'none' }}
-            onChange={onFile}
+            onChange={midi.onFile}
           />
-          <Menu anchorEl={moreAnchor} open={Boolean(moreAnchor)} onClose={onCloseMore}>
+          <Menu anchorEl={moreAnchor} open={Boolean(moreAnchor)} onClose={closeMore}>
             <MenuItem
               onClick={() => {
-                onCloseMore()
-                exportMidi()
+                closeMore()
+                midi.exportMidi()
               }}
-              disabled={exporting}
+              disabled={midi.exporting}
             >
               <ListItemIcon>
                 <FileDownloadIcon fontSize="small" />
@@ -331,10 +326,10 @@ export function EditorToolbar({
             {canEdit ? (
               <MenuItem
                 onClick={() => {
-                  onCloseMore()
-                  importMidi()
+                  closeMore()
+                  midi.importMidi()
                 }}
-                disabled={importing}
+                disabled={midi.importing}
               >
                 <ListItemIcon>
                   <FileUploadIcon fontSize="small" />
@@ -344,8 +339,8 @@ export function EditorToolbar({
             ) : null}
             <MenuItem
               onClick={() => {
-                onCloseMore()
-                onOpenHistory()
+                closeMore()
+                setHistoryOpen(true)
               }}
             >
               <ListItemIcon>
@@ -356,7 +351,7 @@ export function EditorToolbar({
             {isOwner ? (
               <MenuItem
                 onClick={() => {
-                  onCloseMore()
+                  closeMore()
                   songActions.openDelete()
                 }}
               >
@@ -379,7 +374,7 @@ export function EditorToolbar({
                   <MenuItem
                     key="seed-1k"
                     onClick={() => {
-                      onCloseMore()
+                      closeMore()
                       songActions.seed(1000)
                     }}
                   >
@@ -388,7 +383,7 @@ export function EditorToolbar({
                   <MenuItem
                     key="seed-10k"
                     onClick={() => {
-                      onCloseMore()
+                      closeMore()
                       songActions.seed(10000)
                     }}
                   >
@@ -419,7 +414,7 @@ export function EditorToolbar({
             songId={songId}
             version={current?.version}
             open={historyOpen}
-            onClose={onCloseHistory}
+            onClose={() => setHistoryOpen(false)}
           />
         </Stack>
       </Container>

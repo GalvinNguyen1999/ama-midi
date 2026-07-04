@@ -51,8 +51,6 @@ export function EditorPage() {
     ? current.collaborators.filter((c) => c.userId !== current.ownerId)
     : []
 
-  const [moreAnchor, setMoreAnchor] = useState<null | HTMLElement>(null)
-  const [historyOpen, setHistoryOpen] = useState(false)
   const title = useSongTitle(current, isOwner)
   const sharing = useSharing(current)
   const { scrollRef, onScroll, reload } = useWindowedNotes(id)
@@ -121,32 +119,19 @@ export function EditorPage() {
         title={title}
         sharing={sharing}
         songActions={songActions}
-        undo={undo}
-        redo={redo}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        suggest={suggest}
-        suggesting={suggesting}
-        playing={playing}
-        playhead={playhead}
-        onPlay={play}
-        onStop={stop}
-        loop={loop}
-        onToggleLoop={() => setLoop((v) => !v)}
-        timbre={timbre}
-        onTimbreChange={setTimbre}
-        fileInputRef={fileInputRef}
-        onFile={onFile}
-        exportMidi={exportMidi}
-        exporting={exporting}
-        importMidi={importMidi}
-        importing={importing}
-        moreAnchor={moreAnchor}
-        onOpenMore={(e) => setMoreAnchor(e.currentTarget)}
-        onCloseMore={() => setMoreAnchor(null)}
-        historyOpen={historyOpen}
-        onOpenHistory={() => setHistoryOpen(true)}
-        onCloseHistory={() => setHistoryOpen(false)}
+        transport={{
+          playing,
+          playhead,
+          play,
+          stop,
+          loop,
+          toggleLoop: () => setLoop((v) => !v),
+          timbre,
+          setTimbre,
+        }}
+        history={{ undo, redo, canUndo, canRedo }}
+        midi={{ fileInputRef, onFile, exportMidi, exporting, importMidi, importing }}
+        suggestions={{ suggest, suggesting }}
         showDevTools={import.meta.env.DEV}
       />
 
