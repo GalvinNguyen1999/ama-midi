@@ -43,20 +43,28 @@ export function createWsServer(server: Server) {
 
       const msg = parsed.data
 
-      if (msg.type === 'join') {
-        hub.join(ws, msg.songId, msg.user ?? ANON)
-      } else if (msg.type === 'leave') {
-        hub.leave(ws, msg.songId)
-      } else if (msg.type === 'cursor') {
-        hub.relayCursor(ws, msg.songId, {
-          type: 'cursor',
-          songId: msg.songId,
-          user: msg.user,
-          track: msg.track,
-          time: msg.time,
-        })
-      } else {
-        hub.subscribeUser(ws, msg.userId)
+      switch (msg.type) {
+        case 'join':
+          hub.join(ws, msg.songId, msg.user ?? ANON)
+          break
+
+        case 'leave':
+          hub.leave(ws, msg.songId)
+          break
+
+        case 'cursor':
+          hub.relayCursor(ws, msg.songId, {
+            type: 'cursor',
+            songId: msg.songId,
+            user: msg.user,
+            track: msg.track,
+            time: msg.time,
+          })
+          break
+
+        case 'subscribe':
+          hub.subscribeUser(ws, msg.userId)
+          break
       }
     })
 
