@@ -96,6 +96,16 @@ describe('useNoteEditing', () => {
     expect(record).not.toHaveBeenCalled()
   })
 
+  it('moveMany optimistically moves and records an update per note', async () => {
+    dispatch.mockResolvedValue(editNote.fulfilled(note as never, 'req', { id: 'n1', input: {} as never }))
+    const record = jest.fn()
+    const { result } = renderHook(() => useNoteEditing(current, record))
+    await act(async () => {
+      await result.current.moveMany([{ note, track: 4, time: 8 }])
+    })
+    expect(record).toHaveBeenCalledWith(expect.objectContaining({ kind: 'update', id: 'n1' }))
+  })
+
   it('deleteMany records one delete per removed note', async () => {
     dispatch.mockResolvedValue(removeNote.fulfilled('n1', 'req', 'n1'))
     const record = jest.fn()

@@ -1,4 +1,5 @@
-import { Box, Chip, Tooltip, Typography } from '@mui/material'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import { Box, Button, Chip, Stack, Tooltip, Typography } from '@mui/material'
 import { useEffect, useRef } from 'react'
 
 import type { Note } from '~/types/midi'
@@ -22,6 +23,7 @@ interface Props {
   onCreateAt: (track: number, time: number) => void
   onSelectNote: (note: Note) => void
   onMoveNote: (note: Note, track: number, time: number) => void
+  onMoveMany?: (moves: { note: Note; track: number; time: number }[]) => void
   onDeleteMany: (ids: string[]) => void
   playhead: number | null
   loading?: boolean
@@ -39,6 +41,7 @@ export function PianoRoll({
   onCreateAt,
   onSelectNote,
   onMoveNote,
+  onMoveMany,
   onDeleteMany,
   playhead,
   loading,
@@ -49,14 +52,16 @@ export function PianoRoll({
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const playheadRef = useRef<HTMLDivElement | null>(null)
 
-  const { hover, overNote, drag, selection, marquee, cursor, handlers } = usePianoRollInteraction({
-    notes,
-    onCreateAt,
-    onSelectNote,
-    onMoveNote,
-    onDeleteMany,
-    readOnly,
-  })
+  const { hover, overNote, drag, selection, marquee, cursor, deleteSelected, clearSelection, handlers } =
+    usePianoRollInteraction({
+      notes,
+      onCreateAt,
+      onSelectNote,
+      onMoveNote,
+      onMoveMany,
+      onDeleteMany,
+      readOnly,
+    })
 
   useNoteCanvas(canvasRef, notes, drag?.note.id, selection)
 
@@ -141,12 +146,26 @@ export function PianoRoll({
           ) : null}
 
           {selection.size > 0 ? (
-            <Chip
-              size="small"
-              color="info"
-              label={`${selection.size} selected · press Delete`}
-              sx={{ position: 'absolute', top: 8, left: 8, zIndex: 6, pointerEvents: 'none' }}
-            />
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              sx={{ position: 'absolute', top: 8, left: 8, zIndex: 6 }}
+            >
+              <Chip size="small" color="info" label={`${selection.size} selected`} />
+              <Button
+                size="small"
+                variant="contained"
+                color="error"
+                startIcon={<DeleteOutlineIcon />}
+                onClick={deleteSelected}
+              >
+                Delete
+              </Button>
+              <Button size="small" color="inherit" onClick={clearSelection}>
+                Clear
+              </Button>
+            </Stack>
           ) : null}
 
           {hover && !drag && !overNote ? (

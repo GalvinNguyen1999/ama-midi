@@ -1,4 +1,6 @@
-import { Box, CircularProgress, Container, Paper, Typography } from '@mui/material'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import MusicOffIcon from '@mui/icons-material/MusicOff'
+import { Box, Button, CircularProgress, Container, Paper, Typography } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -155,6 +157,7 @@ export function EditorPage() {
                 onCreateAt={notes.openCreate}
                 onSelectNote={notes.openEdit}
                 onMoveNote={notes.moveNote}
+                onMoveMany={notes.moveMany}
                 onDeleteMany={notes.deleteMany}
                 playhead={playing ? playhead : null}
                 loading={notesLoading > 0}
@@ -200,7 +203,18 @@ export function EditorPage() {
             ) : null}
           </Box>
         ) : (
-          <Typography color="text.secondary">Song not found.</Typography>
+          <Paper variant="outlined" sx={{ p: 8, textAlign: 'center', borderRadius: 4, mt: 4 }}>
+            <MusicOffIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
+            <Typography variant="h6" gutterBottom>
+              Song not found
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              It may have been deleted, or you don’t have access to it.
+            </Typography>
+            <Button variant="contained" startIcon={<ArrowBackIcon />} onClick={() => navigate('/songs')}>
+              Back to library
+            </Button>
+          </Paper>
         )}
       </Container>
 

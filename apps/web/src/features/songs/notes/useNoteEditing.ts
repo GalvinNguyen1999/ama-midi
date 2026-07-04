@@ -113,6 +113,23 @@ export function useNoteEditing(current: SongWithNotes | null, record: (entry: Hi
     })
   }
 
+  const moveMany = async (moves: { note: Note; track: number; time: number }[]) => {
+    for (const m of moves) dispatch(applyNoteUpsert({ ...m.note, track: m.track, time: m.time }))
+    for (const m of moves) {
+      const res = await dispatch(editNote({ id: m.note.id, input: { track: m.track, time: m.time } }))
+      if (editNote.rejected.match(res)) {
+        dispatch(applyNoteUpsert(m.note))
+        continue
+      }
+      record({
+        kind: 'update',
+        id: m.note.id,
+        before: toPatch(m.note),
+        after: toPatch({ ...m.note, track: m.track, time: m.time }),
+      })
+    }
+  }
+
   const deleteMany = async (ids: string[]) => {
     if (!current) return
     const targets = current.notes.filter((n) => ids.includes(n.id))
@@ -128,5 +145,15 @@ export function useNoteEditing(current: SongWithNotes | null, record: (entry: Hi
     if (deleted > 0) toast.success(`Deleted ${deleted} note${deleted > 1 ? 's' : ''}`)
   }
 
-  return { dialog, openCreate, openEdit, closeDialog, submit, deleteNote, moveNote, deleteMany }
+  return {
+    dialog,
+    openCreate,
+    openEdit,
+    closeDialog,
+    submit,
+    deleteNote,
+    moveNote,
+    moveMany,
+    deleteMany,
+  }
 }

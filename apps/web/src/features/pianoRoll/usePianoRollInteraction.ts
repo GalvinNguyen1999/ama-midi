@@ -3,7 +3,17 @@ import type { MouseEvent } from 'react'
 
 import type { Note } from '~/types/midi'
 
-import { NOTE_RADIUS, timeToY, trackCenterX, xToTrack, yToTime } from '~/features/pianoRoll/config'
+import {
+  NOTE_RADIUS,
+  TIME_MAX,
+  TRACK_COUNT,
+  TRACK_MIN,
+  clamp,
+  timeToY,
+  trackCenterX,
+  xToTrack,
+  yToTime,
+} from '~/features/pianoRoll/config'
 
 export interface Pos {
   track: number
@@ -24,11 +34,14 @@ export interface Marquee {
 const HIT_R2 = (NOTE_RADIUS + 3) * (NOTE_RADIUS + 3)
 const MARQUEE_THRESHOLD = 4
 
+const TRACK_MAX = TRACK_MIN + TRACK_COUNT - 1
+
 interface Params {
   notes: Note[]
   onCreateAt: (track: number, time: number) => void
   onSelectNote: (note: Note) => void
   onMoveNote: (note: Note, track: number, time: number) => void
+  onMoveMany?: (moves: { note: Note; track: number; time: number }[]) => void
   onDeleteMany?: (ids: string[]) => void
   readOnly?: boolean
 }
@@ -40,6 +53,8 @@ interface PianoRollInteraction {
   selection: Set<string>
   marquee: Marquee | null
   cursor: string
+  deleteSelected: () => void
+  clearSelection: () => void
   handlers: {
     onMouseDown: (e: MouseEvent<HTMLDivElement>) => void
     onMouseMove: (e: MouseEvent<HTMLDivElement>) => void
@@ -54,6 +69,7 @@ export function usePianoRollInteraction({
   onCreateAt,
   onSelectNote,
   onMoveNote,
+  onMoveMany,
   onDeleteMany,
   readOnly = false,
 }: Params): PianoRollInteraction {
@@ -65,8 +81,37 @@ export function usePianoRollInteraction({
 
   const suppressClick = useRef(false)
   const marqueeStart = useRef<{ x: number; y: number } | null>(null)
+  const groupDrag = useRef<Note[] | null>(null)
   const deleteManyRef = useRef(onDeleteMany)
   deleteManyRef.current = onDeleteMany
+  const moveManyRef = useRef(onMoveMany)
+  moveManyRef.current = onMoveMany
+  const notesRef = useRef(notes)
+  notesRef.current = notes
+  const selectionRef = useRef(selection)
+  selectionRef.current = selection
+
+  const clearSelection = () => setSelection(new Set())
+
+  const deleteSelected = () => {
+    if (selection.size === 0) return
+    deleteManyRef.current?.([...selection])
+    setSelection(new Set())
+  }
+
+  const nudge = (dTrack: number, dTime: number) => {
+    const ids = selectionRef.current
+    if (ids.size === 0) return
+    const moves = notesRef.current
+      .filter((n) => ids.has(n.id))
+      .map((note) => ({
+        note,
+        track: clamp(note.track + dTrack, TRACK_MIN, TRACK_MAX),
+        time: clamp(note.time + dTime, 0, TIME_MAX),
+      }))
+      .filter((m) => m.track !== m.note.track || m.time !== m.note.time)
+    if (moves.length > 0) moveManyRef.current?.(moves)
+  }
 
   const posFromEvent = (e: MouseEvent<HTMLDivElement>): { x: number; y: number; pos: Pos } => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -100,22 +145,37 @@ export function usePianoRollInteraction({
   }
 
   useEffect(() => {
+    if (readOnly) return
+
     const onKey = (e: KeyboardEvent) => {
-      if (readOnly) return
-      if (e.key !== 'Delete' && e.key !== 'Backspace') return
-      if (selection.size === 0) return
+      if (selectionRef.current.size === 0) return
 
       const target = e.target as HTMLElement | null
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return
 
-      e.preventDefault()
-      deleteManyRef.current?.([...selection])
-      setSelection(new Set())
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault()
+        deleteManyRef.current?.([...selectionRef.current])
+        setSelection(new Set())
+        return
+      }
+
+      const nudges: Record<string, [number, number]> = {
+        ArrowLeft: [-1, 0],
+        ArrowRight: [1, 0],
+        ArrowUp: [0, -1],
+        ArrowDown: [0, 1],
+      }
+      const delta = nudges[e.key]
+      if (delta) {
+        e.preventDefault()
+        nudge(delta[0], delta[1])
+      }
     }
 
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [selection, readOnly])
+  }, [readOnly])
 
   const onMouseMove = (e: MouseEvent<HTMLDivElement>) => {
     if (readOnly) return
@@ -141,7 +201,12 @@ export function usePianoRollInteraction({
     const note = hitTest(x, y)
 
     if (note) {
-      setSelection(new Set())
+      if (selection.has(note.id) && selection.size > 1) {
+        groupDrag.current = notes.filter((n) => selection.has(n.id))
+      } else {
+        setSelection(new Set())
+        groupDrag.current = null
+      }
       setHover(null)
       setDrag({ note, track: note.track, time: note.time })
       return
@@ -153,9 +218,26 @@ export function usePianoRollInteraction({
 
   const onMouseUp = () => {
     if (drag) {
-      const changed = drag.track !== drag.note.track || drag.time !== drag.note.time
-      if (changed) onMoveNote(drag.note, drag.track, drag.time)
-      else onSelectNote(drag.note)
+      const dTrack = drag.track - drag.note.track
+      const dTime = drag.time - drag.note.time
+      const changed = dTrack !== 0 || dTime !== 0
+      const group = groupDrag.current
+      groupDrag.current = null
+      if (changed) {
+        if (group && group.length > 1 && moveManyRef.current) {
+          moveManyRef.current(
+            group.map((note) => ({
+              note,
+              track: clamp(note.track + dTrack, TRACK_MIN, TRACK_MAX),
+              time: clamp(note.time + dTime, 0, TIME_MAX),
+            })),
+          )
+        } else {
+          onMoveNote(drag.note, drag.track, drag.time)
+        }
+      } else {
+        onSelectNote(drag.note)
+      }
       suppressClick.current = true
       setDrag(null)
       return
@@ -178,6 +260,7 @@ export function usePianoRollInteraction({
     setHover(null)
     setOverNote(false)
     setDrag(null)
+    groupDrag.current = null
     marqueeStart.current = null
     setMarquee(null)
   }
@@ -205,6 +288,8 @@ export function usePianoRollInteraction({
     selection,
     marquee,
     cursor,
+    deleteSelected,
+    clearSelection,
     handlers: { onMouseDown, onMouseMove, onMouseUp, onMouseLeave, onClick },
   }
 }

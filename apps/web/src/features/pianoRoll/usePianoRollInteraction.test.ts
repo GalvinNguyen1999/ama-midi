@@ -119,4 +119,72 @@ describe('usePianoRollInteraction', () => {
     expect(view.result.current.hover).toBeNull()
     expect(view.result.current.cursor).toBe('crosshair')
   })
+
+  it('deleteSelected() deletes and clears the current selection', () => {
+    const { view, onDeleteMany } = setup()
+    act(() => view.result.current.handlers.onMouseDown(evt(NX - 20, NY - 20)))
+    act(() => view.result.current.handlers.onMouseMove(evt(NX + 20, NY + 20)))
+    act(() => view.result.current.handlers.onMouseUp())
+    act(() => view.result.current.deleteSelected())
+    expect(onDeleteMany).toHaveBeenCalledWith(['n1'])
+    expect(view.result.current.selection.size).toBe(0)
+  })
+
+  it('clearSelection() empties the selection without deleting', () => {
+    const { view, onDeleteMany } = setup()
+    act(() => view.result.current.handlers.onMouseDown(evt(NX - 20, NY - 20)))
+    act(() => view.result.current.handlers.onMouseMove(evt(NX + 20, NY + 20)))
+    act(() => view.result.current.handlers.onMouseUp())
+    act(() => view.result.current.clearSelection())
+    expect(view.result.current.selection.size).toBe(0)
+    expect(onDeleteMany).not.toHaveBeenCalled()
+  })
+
+  it('nudges the selection with arrow keys via onMoveMany', () => {
+    const onMoveMany = jest.fn()
+    const { result } = renderHook(() =>
+      usePianoRollInteraction({
+        notes: [note],
+        onCreateAt: jest.fn(),
+        onSelectNote: jest.fn(),
+        onMoveNote: jest.fn(),
+        onMoveMany,
+        onDeleteMany: jest.fn(),
+      }),
+    )
+    act(() => result.current.handlers.onMouseDown(evt(NX - 20, NY - 20)))
+    act(() => result.current.handlers.onMouseMove(evt(NX + 20, NY + 20)))
+    act(() => result.current.handlers.onMouseUp())
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' })))
+    expect(onMoveMany).toHaveBeenCalledWith([{ note, track: note.track + 1, time: note.time }])
+  })
+
+  it('moves the whole selection when dragging one selected note', () => {
+    const note2: Note = { ...note, id: 'n2', track: 4, time: 12 }
+    const N2X = trackCenterX(note2.track)
+    const N2Y = timeToY(note2.time)
+    const onMoveMany = jest.fn()
+    const { result } = renderHook(() =>
+      usePianoRollInteraction({
+        notes: [note, note2],
+        onCreateAt: jest.fn(),
+        onSelectNote: jest.fn(),
+        onMoveNote: jest.fn(),
+        onMoveMany,
+        onDeleteMany: jest.fn(),
+      }),
+    )
+    act(() => result.current.handlers.onMouseDown(evt(Math.min(NX, N2X) - 20, Math.min(NY, N2Y) - 20)))
+    act(() => result.current.handlers.onMouseMove(evt(Math.max(NX, N2X) + 20, Math.max(NY, N2Y) + 20)))
+    act(() => result.current.handlers.onMouseUp())
+    expect(result.current.selection.size).toBe(2)
+
+    act(() => result.current.handlers.onMouseDown(evt(NX, NY)))
+    act(() => result.current.handlers.onMouseMove(evt(NX, timeToY(note.time + 10))))
+    act(() => result.current.handlers.onMouseUp())
+    expect(onMoveMany).toHaveBeenCalledWith([
+      { note, track: note.track, time: note.time + 10 },
+      { note: note2, track: note2.track, time: note2.time + 10 },
+    ])
+  })
 })
