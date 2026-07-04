@@ -1,5 +1,18 @@
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
-import { Box, Button, Chip, Stack, Tooltip, Typography } from '@mui/material'
+import EditIcon from '@mui/icons-material/Edit'
+import {
+  Box,
+  Button,
+  Chip,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Stack,
+  Tooltip,
+  Typography,
+} from '@mui/material'
 import { useEffect, useRef } from 'react'
 
 import type { Note } from '~/types/midi'
@@ -25,6 +38,7 @@ interface Props {
   onSelectNote: (note: Note) => void
   onMoveNote: (note: Note, track: number, time: number) => void
   onMoveMany?: (moves: { note: Note; track: number; time: number }[]) => void
+  onDuplicate?: (notes: Note[]) => void
   onDeleteMany: (ids: string[]) => void
   playhead: number | null
   onSeek?: (time: number) => void
@@ -44,6 +58,7 @@ export function PianoRoll({
   onSelectNote,
   onMoveNote,
   onMoveMany,
+  onDuplicate,
   onDeleteMany,
   playhead,
   onSeek,
@@ -55,16 +70,35 @@ export function PianoRoll({
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const playheadRef = useRef<HTMLDivElement | null>(null)
 
-  const { hover, overNote, drag, selection, marquee, cursor, deleteSelected, clearSelection, handlers } =
-    usePianoRollInteraction({
-      notes,
-      onCreateAt,
-      onSelectNote,
-      onMoveNote,
-      onMoveMany,
-      onDeleteMany,
-      readOnly,
-    })
+  const {
+    hover,
+    overNote,
+    drag,
+    selection,
+    marquee,
+    cursor,
+    menu,
+    closeMenu,
+    deleteSelected,
+    clearSelection,
+    handlers,
+  } = usePianoRollInteraction({
+    notes,
+    onCreateAt,
+    onSelectNote,
+    onMoveNote,
+    onMoveMany,
+    onDuplicate,
+    onDeleteMany,
+    readOnly,
+  })
+
+  const menuTargets =
+    menu && selection.has(menu.note.id) && selection.size > 0
+      ? notes.filter((n) => selection.has(n.id))
+      : menu
+        ? [menu.note]
+        : []
 
   useNoteCanvas(canvasRef, notes, drag?.note.id, selection)
 
@@ -311,6 +345,52 @@ export function PianoRoll({
           ) : null}
         </Box>
       </Box>
+
+      <Menu
+        open={Boolean(menu)}
+        onClose={closeMenu}
+        anchorReference="anchorPosition"
+        anchorPosition={menu ? { top: menu.y, left: menu.x } : undefined}
+      >
+        <MenuItem
+          onClick={() => {
+            if (menu) onSelectNote(menu.note)
+            closeMenu()
+          }}
+        >
+          <ListItemIcon>
+            <EditIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Edit</ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            onDuplicate?.(menuTargets)
+            closeMenu()
+          }}
+        >
+          <ListItemIcon>
+            <ContentCopyIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>
+            Duplicate{menuTargets.length > 1 ? ` (${menuTargets.length})` : ''}
+          </ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            onDeleteMany(menuTargets.map((n) => n.id))
+            clearSelection()
+            closeMenu()
+          }}
+        >
+          <ListItemIcon>
+            <DeleteOutlineIcon fontSize="small" color="error" />
+          </ListItemIcon>
+          <ListItemText sx={{ color: 'error.main' }}>
+            Delete{menuTargets.length > 1 ? ` (${menuTargets.length})` : ''}
+          </ListItemText>
+        </MenuItem>
+      </Menu>
     </Box>
   )
 }

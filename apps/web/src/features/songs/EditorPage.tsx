@@ -158,6 +158,7 @@ export function EditorPage() {
                 onSelectNote={notes.openEdit}
                 onMoveNote={notes.moveNote}
                 onMoveMany={notes.moveMany}
+                onDuplicate={notes.duplicate}
                 onDeleteMany={notes.deleteMany}
                 playhead={playing ? playhead : null}
                 onSeek={(t) => play(t)}

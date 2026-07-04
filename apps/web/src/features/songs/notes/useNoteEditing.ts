@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { toast } from 'react-toastify'
 
-import { DEFAULT_NOTE_COLOR } from '~/features/pianoRoll/config'
+import { DEFAULT_NOTE_COLOR, TIME_MAX } from '~/features/pianoRoll/config'
 import type { NoteFormValues } from '~/features/songs/notes/NoteDialog'
 import type { HistoryEntry, NotePatch } from '~/features/songs/notes/useEditorHistory'
 import { useAppDispatch } from '~/store/hooks'
@@ -130,6 +130,31 @@ export function useNoteEditing(current: SongWithNotes | null, record: (entry: Hi
     }
   }
 
+  const duplicate = async (source: Note[]) => {
+    if (!current || source.length === 0) return
+    let made = 0
+    for (const n of source) {
+      const time = n.time + 1 <= TIME_MAX ? n.time + 1 : Math.max(0, n.time - 1)
+      const res = await dispatch(
+        addNote({
+          songId: current.id,
+          input: {
+            title: n.title,
+            description: n.description ?? undefined,
+            track: n.track,
+            time,
+            color: n.color,
+          },
+        }),
+      )
+      if (addNote.fulfilled.match(res)) {
+        record({ kind: 'create', note: res.payload })
+        made += 1
+      }
+    }
+    if (made > 0) toast.success(`Duplicated ${made} note${made > 1 ? 's' : ''}`)
+  }
+
   const deleteMany = async (ids: string[]) => {
     if (!current) return
     const targets = current.notes.filter((n) => ids.includes(n.id))
@@ -154,6 +179,7 @@ export function useNoteEditing(current: SongWithNotes | null, record: (entry: Hi
     deleteNote,
     moveNote,
     moveMany,
+    duplicate,
     deleteMany,
   }
 }

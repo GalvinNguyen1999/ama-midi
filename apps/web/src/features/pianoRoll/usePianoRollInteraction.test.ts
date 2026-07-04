@@ -159,6 +159,38 @@ describe('usePianoRollInteraction', () => {
     expect(onMoveMany).toHaveBeenCalledWith([{ note, track: note.track + 1, time: note.time }])
   })
 
+  it('opens and closes a context menu on right-click over a note', () => {
+    const { view } = setup()
+    act(() =>
+      view.result.current.handlers.onContextMenu({
+        ...evt(NX, NY),
+        preventDefault: jest.fn(),
+      } as unknown as MouseEvent<HTMLDivElement>),
+    )
+    expect(view.result.current.menu?.note.id).toBe('n1')
+    act(() => view.result.current.closeMenu())
+    expect(view.result.current.menu).toBeNull()
+  })
+
+  it('duplicates the selection on Cmd/Ctrl+D', () => {
+    const onDuplicate = jest.fn()
+    const { result } = renderHook(() =>
+      usePianoRollInteraction({
+        notes: [note],
+        onCreateAt: jest.fn(),
+        onSelectNote: jest.fn(),
+        onMoveNote: jest.fn(),
+        onDuplicate,
+        onDeleteMany: jest.fn(),
+      }),
+    )
+    act(() => result.current.handlers.onMouseDown(evt(NX - 20, NY - 20)))
+    act(() => result.current.handlers.onMouseMove(evt(NX + 20, NY + 20)))
+    act(() => result.current.handlers.onMouseUp())
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', metaKey: true })))
+    expect(onDuplicate).toHaveBeenCalledWith([note])
+  })
+
   it('moves the whole selection when dragging one selected note', () => {
     const note2: Note = { ...note, id: 'n2', track: 4, time: 12 }
     const N2X = trackCenterX(note2.track)

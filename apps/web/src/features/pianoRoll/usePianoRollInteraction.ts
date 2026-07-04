@@ -42,8 +42,15 @@ interface Params {
   onSelectNote: (note: Note) => void
   onMoveNote: (note: Note, track: number, time: number) => void
   onMoveMany?: (moves: { note: Note; track: number; time: number }[]) => void
+  onDuplicate?: (notes: Note[]) => void
   onDeleteMany?: (ids: string[]) => void
   readOnly?: boolean
+}
+
+export interface ContextMenu {
+  note: Note
+  x: number
+  y: number
 }
 
 interface PianoRollInteraction {
@@ -53,6 +60,8 @@ interface PianoRollInteraction {
   selection: Set<string>
   marquee: Marquee | null
   cursor: string
+  menu: ContextMenu | null
+  closeMenu: () => void
   deleteSelected: () => void
   clearSelection: () => void
   handlers: {
@@ -61,6 +70,7 @@ interface PianoRollInteraction {
     onMouseUp: () => void
     onMouseLeave: () => void
     onClick: (e: MouseEvent<HTMLDivElement>) => void
+    onContextMenu: (e: MouseEvent<HTMLDivElement>) => void
   }
 }
 
@@ -70,6 +80,7 @@ export function usePianoRollInteraction({
   onSelectNote,
   onMoveNote,
   onMoveMany,
+  onDuplicate,
   onDeleteMany,
   readOnly = false,
 }: Params): PianoRollInteraction {
@@ -78,6 +89,7 @@ export function usePianoRollInteraction({
   const [drag, setDrag] = useState<DragState | null>(null)
   const [selection, setSelection] = useState<Set<string>>(new Set())
   const [marquee, setMarquee] = useState<Marquee | null>(null)
+  const [menu, setMenu] = useState<ContextMenu | null>(null)
 
   const suppressClick = useRef(false)
   const marqueeStart = useRef<{ x: number; y: number } | null>(null)
@@ -86,12 +98,17 @@ export function usePianoRollInteraction({
   deleteManyRef.current = onDeleteMany
   const moveManyRef = useRef(onMoveMany)
   moveManyRef.current = onMoveMany
+  const duplicateRef = useRef(onDuplicate)
+  duplicateRef.current = onDuplicate
   const notesRef = useRef(notes)
   notesRef.current = notes
   const selectionRef = useRef(selection)
   selectionRef.current = selection
 
+  const selectedNotes = () => notesRef.current.filter((n) => selectionRef.current.has(n.id))
+
   const clearSelection = () => setSelection(new Set())
+  const closeMenu = () => setMenu(null)
 
   const deleteSelected = () => {
     if (selection.size === 0) return
@@ -157,6 +174,12 @@ export function usePianoRollInteraction({
         e.preventDefault()
         deleteManyRef.current?.([...selectionRef.current])
         setSelection(new Set())
+        return
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd') {
+        e.preventDefault()
+        duplicateRef.current?.(selectedNotes())
         return
       }
 
@@ -265,6 +288,16 @@ export function usePianoRollInteraction({
     setMarquee(null)
   }
 
+  const onContextMenu = (e: MouseEvent<HTMLDivElement>) => {
+    if (readOnly) return
+    const { x, y } = posFromEvent(e)
+    const note = hitTest(x, y)
+    if (!note) return
+    e.preventDefault()
+    if (!selection.has(note.id)) setSelection(new Set())
+    setMenu({ note, x: e.clientX, y: e.clientY })
+  }
+
   const onClick = (e: MouseEvent<HTMLDivElement>) => {
     if (readOnly) return
     if (suppressClick.current) {
@@ -288,8 +321,10 @@ export function usePianoRollInteraction({
     selection,
     marquee,
     cursor,
+    menu,
+    closeMenu,
     deleteSelected,
     clearSelection,
-    handlers: { onMouseDown, onMouseMove, onMouseUp, onMouseLeave, onClick },
+    handlers: { onMouseDown, onMouseMove, onMouseUp, onMouseLeave, onClick, onContextMenu },
   }
 }

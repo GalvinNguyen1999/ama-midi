@@ -96,6 +96,16 @@ describe('useNoteEditing', () => {
     expect(record).not.toHaveBeenCalled()
   })
 
+  it('duplicate creates an offset copy and records a create', async () => {
+    dispatch.mockResolvedValue(addNote.fulfilled(note as never, 'req', { songId: 's1', input: {} as never }))
+    const record = jest.fn()
+    const { result } = renderHook(() => useNoteEditing(current, record))
+    await act(async () => {
+      await result.current.duplicate([note])
+    })
+    expect(record).toHaveBeenCalledWith({ kind: 'create', note })
+  })
+
   it('moveMany optimistically moves and records an update per note', async () => {
     dispatch.mockResolvedValue(editNote.fulfilled(note as never, 'req', { id: 'n1', input: {} as never }))
     const record = jest.fn()
