@@ -160,7 +160,7 @@ export function EditorPage() {
             <CircularProgress />
           </Box>
         ) : current ? (
-          <Box sx={{ position: 'relative' }}>
+          <Box sx={{ position: 'relative', width: 'fit-content', maxWidth: '100%', mx: 'auto' }}>
             <Box ref={scrollRef} onScroll={onScroll} sx={{ maxHeight: '72vh', overflow: 'auto' }}>
               <PianoRoll
                 notes={current.notes}
