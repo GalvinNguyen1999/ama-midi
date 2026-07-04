@@ -22,17 +22,13 @@ import {
   Chip,
   CircularProgress,
   Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControl,
+  Divider,
   IconButton,
-  InputLabel,
+  ListItemIcon,
+  ListItemText,
   Menu,
   MenuItem,
   Paper,
-  Popover,
   Select,
   Stack,
   TextField,
@@ -44,30 +40,31 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
-import { inviteCollaboratorApi, removeCollaboratorApi, seedNotesApi } from '~/apis/midi'
+import { seedNotesApi } from '~/apis/midi'
 import { DEFAULT_NOTE_COLOR } from '~/features/pianoRoll/config'
 import { PianoRoll } from '~/features/pianoRoll/PianoRoll'
+import { DeleteSongDialog } from '~/features/songs/DeleteSongDialog'
 import { HistoryDrawer } from '~/features/songs/HistoryDrawer'
 import { NoteDialog, type NoteFormValues } from '~/features/songs/NoteDialog'
 import { OnboardingCallout } from '~/features/songs/OnboardingCallout'
+import { SharePopover } from '~/features/songs/SharePopover'
+import { SuggestionBar } from '~/features/songs/SuggestionBar'
 import { useEditorHistory, type NotePatch } from '~/features/songs/useEditorHistory'
 import { useMidiIO } from '~/features/songs/useMidiIO'
 import { usePlayback, type Timbre } from '~/features/songs/usePlayback'
+import { useSharing } from '~/features/songs/useSharing'
 import { useSongRealtime } from '~/features/songs/useSongRealtime'
+import { useSongTitle } from '~/features/songs/useSongTitle'
 import { useSuggestions } from '~/features/songs/useSuggestions'
 import { useWindowedNotes } from '~/features/songs/useWindowedNotes'
 import { useAppDispatch, useAppSelector } from '~/store/hooks'
 import {
   addNote,
-  applyCollaboratorRemoved,
-  applyCollaboratorUpsert,
   applyNoteUpsert,
   editNote,
   openSong,
   removeNote,
   removeSong,
-  renameSong,
-  setShareMode,
 } from '~/store/songSlice'
 import type { Note } from '~/types/midi'
 import { readUser } from '~/utils/session'
@@ -126,14 +123,11 @@ export function EditorPage() {
 
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const [perfAnchor, setPerfAnchor] = useState<null | HTMLElement>(null)
-  const [shareAnchor, setShareAnchor] = useState<null | HTMLElement>(null)
-  const [editingTitle, setEditingTitle] = useState(false)
-  const [titleDraft, setTitleDraft] = useState('')
+  const [moreAnchor, setMoreAnchor] = useState<null | HTMLElement>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviting, setInviting] = useState(false)
   const [seeding, setSeeding] = useState(false)
+  const title = useSongTitle(current, isOwner)
+  const sharing = useSharing(current)
   const { scrollRef, onScroll, reload } = useWindowedNotes(id)
   const {
     record: recordHistory,
@@ -204,17 +198,6 @@ export function EditorPage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [undo, redo])
 
-  const copyShareLink = async () => {
-    if (!current) return
-    const url = `${window.location.origin}/songs/${current.id}`
-    try {
-      await navigator.clipboard.writeText(url)
-      toast.success('Invite link copied — send it to a collaborator')
-    } catch {
-      toast.info(url)
-    }
-  }
-
   const handleDeleteSong = async () => {
     if (!current) return
     setDeleting(true)
@@ -228,7 +211,7 @@ export function EditorPage() {
 
   const handleSeed = async (count: number) => {
     if (!current) return
-    setPerfAnchor(null)
+    setMoreAnchor(null)
     setSeeding(true)
     const toastId = toast.loading(`Seeding ${count.toLocaleString()} notes…`)
     try {
@@ -308,55 +291,6 @@ export function EditorPage() {
     }
   }
 
-  const startEditTitle = () => {
-    if (!current || !isOwner) return
-    setTitleDraft(current.title)
-    setEditingTitle(true)
-  }
-
-  const commitTitle = async () => {
-    setEditingTitle(false)
-    const title = titleDraft.trim()
-    if (!current || !title || title === current.title) return
-    const res = await dispatch(renameSong({ id: current.id, title }))
-    if (renameSong.fulfilled.match(res)) toast.success('Song renamed')
-  }
-
-  const handleInvite = async () => {
-    const email = inviteEmail.trim()
-    if (!current || !email) return
-    setInviting(true)
-    try {
-      const collaborator = await inviteCollaboratorApi(current.id, email)
-      dispatch(applyCollaboratorUpsert({ songId: current.id, collaborator }))
-      toast.success(`Invited ${collaborator.email}`)
-      setInviteEmail('')
-    } catch {
-      // the axios interceptor surfaces the error message
-    } finally {
-      setInviting(false)
-    }
-  }
-
-  const handleRemoveCollaborator = async (collaboratorId: string, collaboratorEmail: string) => {
-    if (!current) return
-    try {
-      await removeCollaboratorApi(current.id, collaboratorId)
-      dispatch(applyCollaboratorRemoved({ songId: current.id, userId: collaboratorId }))
-      toast.success(`Removed ${collaboratorEmail}`)
-    } catch {
-      // the axios interceptor surfaces the error message
-    }
-  }
-
-  const handleSetShare = async (mode: 'edit' | 'view') => {
-    if (!current || current.shareMode === mode) return
-    const res = await dispatch(setShareMode({ id: current.id, shareMode: mode }))
-    if (setShareMode.fulfilled.match(res)) {
-      toast.success(mode === 'view' ? 'Song is now view-only' : 'Anyone with the link can edit')
-    }
-  }
-
   const handleDeleteMany = async (ids: string[]) => {
     if (!current) return
     const targets = current.notes.filter((n) => ids.includes(n.id))
@@ -404,16 +338,16 @@ export function EditorPage() {
                 <ArrowBackIcon />
               </IconButton>
             </Tooltip>
-            {editingTitle ? (
+            {title.editing ? (
               <TextField
                 autoFocus
                 size="small"
-                value={titleDraft}
-                onChange={(e) => setTitleDraft(e.target.value)}
-                onBlur={commitTitle}
+                value={title.draft}
+                onChange={(e) => title.setDraft(e.target.value)}
+                onBlur={title.commit}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') commitTitle()
-                  if (e.key === 'Escape') setEditingTitle(false)
+                  if (e.key === 'Enter') title.commit()
+                  if (e.key === 'Escape') title.cancel()
                 }}
                 sx={{ width: 260 }}
               />
@@ -424,7 +358,7 @@ export function EditorPage() {
                 </Typography>
                 {current && isOwner ? (
                   <Tooltip title="Rename song">
-                    <IconButton size="small" onClick={startEditTitle}>
+                    <IconButton size="small" onClick={title.start}>
                       <EditIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
@@ -542,30 +476,20 @@ export function EditorPage() {
             ) : null}
             {current ? (
               <Tooltip title="Share this song">
-                <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<LinkIcon />}
-                  onClick={(e) => setShareAnchor(e.currentTarget)}
-                >
+                <Button size="small" variant="outlined" startIcon={<LinkIcon />} onClick={sharing.open}>
                   Share
                 </Button>
               </Tooltip>
             ) : null}
             {current ? (
-              <Tooltip title="Export as MIDI (.mid)">
+              <Tooltip title="More actions">
                 <span>
-                  <IconButton size="small" onClick={exportMidi} disabled={exporting}>
-                    <FileDownloadIcon fontSize="small" />
-                  </IconButton>
-                </span>
-              </Tooltip>
-            ) : null}
-            {current && canEdit ? (
-              <Tooltip title="Import a MIDI file (.mid)">
-                <span>
-                  <IconButton size="small" onClick={importMidi} disabled={importing}>
-                    <FileUploadIcon fontSize="small" />
+                  <IconButton
+                    size="small"
+                    onClick={(e) => setMoreAnchor(e.currentTarget)}
+                    disabled={seeding}
+                  >
+                    {seeding ? <CircularProgress size={18} /> : <MoreVertIcon />}
                   </IconButton>
                 </span>
               </Tooltip>
@@ -577,153 +501,93 @@ export function EditorPage() {
               style={{ display: 'none' }}
               onChange={onFile}
             />
-            {current ? (
-              <Tooltip title="Activity history">
-                <IconButton size="small" onClick={() => setHistoryOpen(true)}>
-                  <HistoryIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            ) : null}
-            {current && isOwner ? (
-              <Tooltip title="Delete song">
-                <IconButton color="error" size="small" onClick={() => setDeleteOpen(true)}>
-                  <DeleteOutlineIcon />
-                </IconButton>
-              </Tooltip>
-            ) : null}
-            {current && canEdit ? (
-              <Tooltip title="Developer tools">
-                <span>
-                  <IconButton size="small" onClick={(e) => setPerfAnchor(e.currentTarget)} disabled={seeding}>
-                    {seeding ? <CircularProgress size={18} /> : <MoreVertIcon />}
-                  </IconButton>
-                </span>
-              </Tooltip>
-            ) : null}
-            <Menu anchorEl={perfAnchor} open={Boolean(perfAnchor)} onClose={() => setPerfAnchor(null)}>
-              <MenuItem disabled sx={{ opacity: '1 !important' }}>
-                <Typography variant="caption" color="text.secondary">
-                  Developer · v{current?.version ?? 0} ·{' '}
-                  {(current?.notes.length ?? 0).toLocaleString()}/
-                  {(current?.noteCount ?? 0).toLocaleString()} loaded
-                </Typography>
+            <Menu anchorEl={moreAnchor} open={Boolean(moreAnchor)} onClose={() => setMoreAnchor(null)}>
+              <MenuItem
+                onClick={() => {
+                  setMoreAnchor(null)
+                  exportMidi()
+                }}
+                disabled={exporting}
+              >
+                <ListItemIcon>
+                  <FileDownloadIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Export MIDI</ListItemText>
               </MenuItem>
-              <MenuItem onClick={() => handleSeed(1000)}>+ 1,000 notes</MenuItem>
-              <MenuItem onClick={() => handleSeed(10000)}>+ 10,000 notes</MenuItem>
+              {canEdit ? (
+                <MenuItem
+                  onClick={() => {
+                    setMoreAnchor(null)
+                    importMidi()
+                  }}
+                  disabled={importing}
+                >
+                  <ListItemIcon>
+                    <FileUploadIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText>Import MIDI</ListItemText>
+                </MenuItem>
+              ) : null}
+              <MenuItem
+                onClick={() => {
+                  setMoreAnchor(null)
+                  setHistoryOpen(true)
+                }}
+              >
+                <ListItemIcon>
+                  <HistoryIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Activity history</ListItemText>
+              </MenuItem>
+              {isOwner ? (
+                <MenuItem
+                  onClick={() => {
+                    setMoreAnchor(null)
+                    setDeleteOpen(true)
+                  }}
+                >
+                  <ListItemIcon>
+                    <DeleteOutlineIcon fontSize="small" color="error" />
+                  </ListItemIcon>
+                  <ListItemText sx={{ color: 'error.main' }}>Delete song</ListItemText>
+                </MenuItem>
+              ) : null}
+              {import.meta.env.DEV && canEdit
+                ? [
+                    <Divider key="dev-divider" />,
+                    <MenuItem key="dev-caption" disabled sx={{ opacity: '1 !important' }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Dev · v{current?.version ?? 0} ·{' '}
+                        {(current?.notes.length ?? 0).toLocaleString()}/
+                        {(current?.noteCount ?? 0).toLocaleString()} loaded
+                      </Typography>
+                    </MenuItem>,
+                    <MenuItem key="seed-1k" onClick={() => handleSeed(1000)}>
+                      + 1,000 notes
+                    </MenuItem>,
+                    <MenuItem key="seed-10k" onClick={() => handleSeed(10000)}>
+                      + 10,000 notes
+                    </MenuItem>,
+                  ]
+                : null}
             </Menu>
 
-            <Popover
-              open={Boolean(shareAnchor)}
-              anchorEl={shareAnchor}
-              onClose={() => setShareAnchor(null)}
-              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-              slotProps={{ paper: { sx: { p: 2, width: 340 } } }}
-            >
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>
-                Share this song
-              </Typography>
-
-              {isOwner ? (
-                <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
-                  <InputLabel id="share-mode-label">Link access</InputLabel>
-                  <Select
-                    labelId="share-mode-label"
-                    label="Link access"
-                    value={current?.shareMode ?? 'edit'}
-                    onChange={(e) => handleSetShare(e.target.value as 'edit' | 'view')}
-                  >
-                    <MenuItem value="edit">Anyone with the link can edit</MenuItem>
-                    <MenuItem value="view">Anyone with the link can view</MenuItem>
-                  </Select>
-                </FormControl>
-              ) : (
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                  Anyone with the link can {current?.shareMode === 'view' ? 'view' : 'edit'}.
-                </Typography>
-              )}
-
-              <Stack direction="row" spacing={1}>
-                <TextField
-                  size="small"
-                  fullWidth
-                  value={current ? `${window.location.origin}/songs/${current.id}` : ''}
-                  slotProps={{ input: { readOnly: true } }}
-                  onFocus={(e) => e.target.select()}
-                />
-                <Button variant="contained" startIcon={<LinkIcon />} onClick={copyShareLink}>
-                  Copy
-                </Button>
-              </Stack>
-
-              {isOwner ? (
-                <>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2, mb: 0.75 }}>
-                    Invite a registered user by email
-                  </Typography>
-                  <Stack direction="row" spacing={1}>
-                    <TextField
-                      size="small"
-                      fullWidth
-                      type="email"
-                      placeholder="name@example.com"
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          handleInvite()
-                        }
-                      }}
-                    />
-                    <Button
-                      variant="outlined"
-                      onClick={handleInvite}
-                      loading={inviting}
-                      disabled={!inviteEmail.trim()}
-                    >
-                      Invite
-                    </Button>
-                  </Stack>
-
-                  {collaborators.length > 0 ? (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ display: 'block', mb: 0.5 }}
-                      >
-                        People with access
-                      </Typography>
-                      <Stack spacing={0.5}>
-                        {collaborators.map((c) => (
-                          <Stack key={c.userId} direction="row" alignItems="center" spacing={1}>
-                            <Avatar sx={{ width: 24, height: 24, fontSize: 12 }}>
-                              {c.email.charAt(0).toUpperCase()}
-                            </Avatar>
-                            <Typography variant="body2" noWrap sx={{ flexGrow: 1, minWidth: 0 }}>
-                              {c.email}
-                            </Typography>
-                            {c.status === 'pending' ? (
-                              <Chip size="small" variant="outlined" color="warning" label="Pending" />
-                            ) : null}
-                            <Tooltip title="Remove access">
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() => handleRemoveCollaborator(c.userId, c.email)}
-                              >
-                                <DeleteOutlineIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          </Stack>
-                        ))}
-                      </Stack>
-                    </Box>
-                  ) : null}
-                </>
-              ) : null}
-            </Popover>
+            <SharePopover
+              open={Boolean(sharing.anchor)}
+              anchorEl={sharing.anchor}
+              onClose={sharing.close}
+              isOwner={isOwner}
+              shareUrl={current ? `${window.location.origin}/songs/${current.id}` : ''}
+              shareMode={current?.shareMode ?? 'edit'}
+              onSetShare={sharing.setShare}
+              onCopy={sharing.copyLink}
+              inviteEmail={sharing.inviteEmail}
+              onInviteEmailChange={sharing.setInviteEmail}
+              inviting={sharing.inviting}
+              onInvite={sharing.invite}
+              collaborators={collaborators}
+              onRemoveCollaborator={sharing.removeCollaborator}
+            />
 
             <HistoryDrawer
               songId={id}
@@ -789,35 +653,14 @@ export function EditorPage() {
             ) : null}
 
             {suggestions.length > 0 ? (
-              <Paper
-                elevation={4}
-                sx={{
-                  position: 'absolute',
-                  top: 16,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  px: 1.5,
-                  py: 0.5,
-                  borderRadius: 5,
-                }}
-              >
-                <AutoAwesomeIcon fontSize="small" color="secondary" />
-                <Typography variant="caption" color="text.secondary">
-                  {suggestions.length} suggested — click a ghost, or
-                </Typography>
-                <Button size="small" variant="contained" onClick={acceptAll} loading={acceptingAll}>
-                  Accept all
-                </Button>
-                <Button size="small" onClick={suggest} disabled={suggesting || acceptingAll}>
-                  Another
-                </Button>
-                <Button size="small" color="inherit" onClick={clear} disabled={acceptingAll}>
-                  Dismiss
-                </Button>
-              </Paper>
+              <SuggestionBar
+                count={suggestions.length}
+                acceptingAll={acceptingAll}
+                suggesting={suggesting}
+                onAcceptAll={acceptAll}
+                onAnother={suggest}
+                onDismiss={clear}
+              />
             ) : null}
           </Box>
         ) : (
@@ -825,20 +668,13 @@ export function EditorPage() {
         )}
       </Container>
 
-      <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)} fullWidth maxWidth="xs">
-        <DialogTitle>Delete song</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary">
-            Delete “{current?.title}” and all its notes? This cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteOpen(false)}>Cancel</Button>
-          <Button color="error" variant="contained" onClick={handleDeleteSong} loading={deleting}>
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <DeleteSongDialog
+        open={deleteOpen}
+        title={current?.title ?? ''}
+        deleting={deleting}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={handleDeleteSong}
+      />
 
       <NoteDialog
         open={dialog.open}
