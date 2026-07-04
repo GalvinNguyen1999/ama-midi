@@ -22,6 +22,18 @@ describe('SongService', () => {
     await expect(SongService.remove('missing', 'user-1')).rejects.toMatchObject({ statusCode: 404 })
   })
 
+  it('getById blocks a pending invitee from opening the song', async () => {
+    mockedRepo.findById.mockResolvedValue({ id: 's1', ownerId: 'owner-1' } as never)
+    mockedRepo.findCollaborator.mockResolvedValue({ status: 'pending' } as never)
+    await expect(SongService.getById('s1', 'u2')).rejects.toMatchObject({ statusCode: 403 })
+  })
+
+  it('assertCanEdit blocks a pending invitee from editing', async () => {
+    mockedRepo.findAccess.mockResolvedValue({ ownerId: 'owner-1', shareMode: 'edit' } as never)
+    mockedRepo.findCollaborator.mockResolvedValue({ status: 'pending' } as never)
+    await expect(SongService.assertCanEdit('s1', 'u2')).rejects.toMatchObject({ statusCode: 403 })
+  })
+
   it('remove throws 403 when caller is not the owner', async () => {
     mockedRepo.findById.mockResolvedValue({ id: 's1', ownerId: 'owner-1' } as never)
     await expect(SongService.remove('s1', 'intruder')).rejects.toMatchObject({ statusCode: 403 })
