@@ -5,6 +5,7 @@ import LinkIcon from '@mui/icons-material/Link'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import RedoIcon from '@mui/icons-material/Redo'
+import RepeatIcon from '@mui/icons-material/Repeat'
 import StopIcon from '@mui/icons-material/Stop'
 import UndoIcon from '@mui/icons-material/Undo'
 import {
@@ -23,7 +24,9 @@ import {
   Menu,
   MenuItem,
   Paper,
+  Select,
   Stack,
+  ToggleButton,
   Tooltip,
   Typography,
 } from '@mui/material'
@@ -37,7 +40,7 @@ import { PianoRoll } from '~/features/pianoRoll/PianoRoll'
 import { NoteDialog, type NoteFormValues } from '~/features/songs/NoteDialog'
 import { OnboardingCallout } from '~/features/songs/OnboardingCallout'
 import { useEditorHistory, type NotePatch } from '~/features/songs/useEditorHistory'
-import { usePlayback } from '~/features/songs/usePlayback'
+import { usePlayback, type Timbre } from '~/features/songs/usePlayback'
 import { useSongRealtime } from '~/features/songs/useSongRealtime'
 import { useWindowedNotes } from '~/features/songs/useWindowedNotes'
 import { useAppDispatch, useAppSelector } from '~/store/hooks'
@@ -80,8 +83,11 @@ export function EditorPage() {
   const loading = useAppSelector((s) => s.song.loading)
   const notesLoading = useAppSelector((s) => s.song.notesLoading)
 
+  const [timbre, setTimbre] = useState<Timbre>('sine')
+  const [loop, setLoop] = useState(false)
+
   const { connected, presence } = useSongRealtime(id, user)
-  const { playing, playhead, play, stop } = usePlayback(current?.notes ?? [])
+  const { playing, playhead, play, stop } = usePlayback(current?.notes ?? [], { timbre, loop })
   const isOwner = !current?.ownerId || current.ownerId === user?.id
 
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -352,15 +358,41 @@ export function EditorPage() {
               </>
             ) : null}
             {current && current.notes.length > 0 ? (
-              <Button
-                size="small"
-                variant={playing ? 'contained' : 'outlined'}
-                color={playing ? 'error' : 'primary'}
-                startIcon={playing ? <StopIcon /> : <PlayArrowIcon />}
-                onClick={playing ? stop : play}
-              >
-                {playing ? `Stop · ${playhead.toFixed(1)}s` : 'Play'}
-              </Button>
+              <>
+                <Button
+                  size="small"
+                  variant={playing ? 'contained' : 'outlined'}
+                  color={playing ? 'error' : 'primary'}
+                  startIcon={playing ? <StopIcon /> : <PlayArrowIcon />}
+                  onClick={playing ? stop : play}
+                >
+                  {playing ? `Stop · ${playhead.toFixed(1)}s` : 'Play'}
+                </Button>
+                <Tooltip title="Loop playback">
+                  <ToggleButton
+                    value="loop"
+                    size="small"
+                    selected={loop}
+                    onChange={() => setLoop((v) => !v)}
+                    sx={{ px: 1, py: 0.5 }}
+                  >
+                    <RepeatIcon fontSize="small" />
+                  </ToggleButton>
+                </Tooltip>
+                <Tooltip title="Instrument tone">
+                  <Select
+                    size="small"
+                    value={timbre}
+                    onChange={(e) => setTimbre(e.target.value as Timbre)}
+                    sx={{ '& .MuiSelect-select': { py: 0.5 } }}
+                  >
+                    <MenuItem value="sine">Sine</MenuItem>
+                    <MenuItem value="triangle">Triangle</MenuItem>
+                    <MenuItem value="square">Square</MenuItem>
+                    <MenuItem value="sawtooth">Saw</MenuItem>
+                  </Select>
+                </Tooltip>
+              </>
             ) : null}
             {current ? (
               <Tooltip title="Copy a link to invite collaborators to this song">

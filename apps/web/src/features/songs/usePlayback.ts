@@ -9,10 +9,12 @@ export function trackFrequency(track: number): number {
   return SCALE[clamp(track - TRACK_MIN, 0, SCALE.length - 1)]
 }
 
-function scheduleTone(ctx: AudioContext, freq: number, at: number, dur = 0.28) {
+export type Timbre = 'sine' | 'triangle' | 'square' | 'sawtooth'
+
+function scheduleTone(ctx: AudioContext, freq: number, at: number, type: Timbre, dur = 0.28) {
   const osc = ctx.createOscillator()
   const gain = ctx.createGain()
-  osc.type = 'sine'
+  osc.type = type
   osc.frequency.value = freq
   osc.connect(gain)
   gain.connect(ctx.destination)
@@ -25,6 +27,11 @@ function scheduleTone(ctx: AudioContext, freq: number, at: number, dur = 0.28) {
   osc.stop(at + dur + 0.02)
 }
 
+interface PlaybackOptions {
+  timbre?: Timbre
+  loop?: boolean
+}
+
 interface PlaybackState {
   playing: boolean
   playhead: number
@@ -32,7 +39,7 @@ interface PlaybackState {
   stop: () => void
 }
 
-export function usePlayback(notes: Note[]): PlaybackState {
+export function usePlayback(notes: Note[], options: PlaybackOptions = {}): PlaybackState {
   const [playing, setPlaying] = useState(false)
   const [playhead, setPlayhead] = useState(0)
   const ctxRef = useRef<AudioContext | null>(null)
@@ -41,6 +48,8 @@ export function usePlayback(notes: Note[]): PlaybackState {
   const endRef = useRef(0)
   const notesRef = useRef(notes)
   notesRef.current = notes
+  const optionsRef = useRef(options)
+  optionsRef.current = options
 
   const stop = useCallback(() => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
@@ -59,13 +68,17 @@ export function usePlayback(notes: Note[]): PlaybackState {
     const ctx = new AudioContext()
     ctxRef.current = ctx
 
-    const t0 = ctx.currentTime + 0.08
-    let last = 0
-    for (const n of current) {
-      scheduleTone(ctx, trackFrequency(n.track), t0 + n.time)
-      if (n.time > last) last = n.time
+    const scheduleCycle = (at0: number) => {
+      const timbre = optionsRef.current.timbre ?? 'sine'
+      let last = 0
+      for (const n of current) {
+        scheduleTone(ctx, trackFrequency(n.track), at0 + n.time, timbre)
+        if (n.time > last) last = n.time
+      }
+      return last
     }
 
+    const last = scheduleCycle(ctx.currentTime + 0.08)
     startRef.current = performance.now()
     endRef.current = Math.min(last + 0.6, TIME_MAX + 0.6)
     setPlaying(true)
@@ -74,6 +87,13 @@ export function usePlayback(notes: Note[]): PlaybackState {
     const tick = () => {
       const elapsed = (performance.now() - startRef.current) / 1000
       if (elapsed >= endRef.current) {
+        if (optionsRef.current.loop) {
+          scheduleCycle(ctx.currentTime + 0.05)
+          startRef.current = performance.now()
+          setPlayhead(0)
+          rafRef.current = requestAnimationFrame(tick)
+          return
+        }
         stop()
         return
       }
