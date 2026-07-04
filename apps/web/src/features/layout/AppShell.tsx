@@ -19,6 +19,7 @@ import { useMemo, useState } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 
 import { handleLogoutApi } from '~/apis'
+import { useUserNotifications } from '~/features/notifications/useUserNotifications'
 import { readUser } from '~/utils/session'
 
 export function AppShell() {
@@ -26,6 +27,8 @@ export function AppShell() {
   const user = useMemo(readUser, [])
   const email = user?.email ?? ''
   const [anchor, setAnchor] = useState<null | HTMLElement>(null)
+
+  useUserNotifications(user?.id)
 
   const logout = async () => {
     await handleLogoutApi()

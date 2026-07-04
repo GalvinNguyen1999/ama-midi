@@ -76,6 +76,32 @@ describe('realtime hub', () => {
     hub.removeEverywhere(asWs(b))
   })
 
+  it('notifyUser reaches every socket subscribed to that user', () => {
+    const a = mockWs()
+    const b = mockWs()
+    hub.subscribeUser(asWs(a), 'user-1')
+    hub.subscribeUser(asWs(b), 'user-2')
+
+    hub.notifyUser('user-1', { type: 'invited', songId: 's1', title: 'Song', by: 'o@x.com' })
+
+    expect(a.send).toHaveBeenCalledTimes(1)
+    expect(b.send).not.toHaveBeenCalled()
+    expect(lastPayload(a)).toMatchObject({ type: 'invited', songId: 's1' })
+
+    hub.removeEverywhere(asWs(a))
+    hub.removeEverywhere(asWs(b))
+  })
+
+  it('notifyUser is a no-op after the user disconnects', () => {
+    const a = mockWs()
+    hub.subscribeUser(asWs(a), 'user-3')
+    hub.removeEverywhere(asWs(a))
+    a.send.mockClear()
+
+    hub.notifyUser('user-3', { type: 'invited', songId: 's1', title: 'Song', by: 'o@x.com' })
+    expect(a.send).not.toHaveBeenCalled()
+  })
+
   it('removeEverywhere drops the socket from all its rooms', () => {
     const a = mockWs()
     const b = mockWs()

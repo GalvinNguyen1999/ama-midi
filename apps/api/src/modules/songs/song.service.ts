@@ -105,14 +105,26 @@ export const SongService = {
     return dto
   },
 
-  async invite(id: string, userId: string | undefined, email: string) {
-    await SongService.assertOwner(id, userId)
+  async invite(id: string, userId: string | undefined, email: string, actor?: string) {
+    const access = await SongRepo.findAccess(id)
+    if (!access) throw ApiError.NotFound('Song not found')
+    if (access.ownerId && access.ownerId !== userId) {
+      throw ApiError.Forbidden('Only the owner can invite collaborators')
+    }
 
     const invitee = await AuthRepo.findByEmail(email)
     if (!invitee) throw ApiError.NotFound('No account is registered with that email')
     if (invitee.id === userId) throw ApiError.BadRequest('You already own this song')
 
     const collaborator = await SongRepo.recordCollaborator(id, invitee.id)
+
+    hub.notifyUser(invitee.id, {
+      type: 'invited',
+      songId: id,
+      title: access.title,
+      by: actor ?? 'Someone',
+    })
+
     return { email: invitee.email, lastSeen: collaborator.lastSeen.toISOString() }
   },
 

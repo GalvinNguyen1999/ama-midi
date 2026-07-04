@@ -51,7 +51,7 @@ export const SongController = {
 
   invite: asyncHandler(async (req: Request, res: Response) => {
     const { email } = req.body as { email: string }
-    res.json(await SongService.invite(stringParam(req, 'id'), req.user?.id, email))
+    res.json(await SongService.invite(stringParam(req, 'id'), req.user?.id, email, req.user?.email))
   }),
 
   remove: asyncHandler(async (req: Request, res: Response) => {

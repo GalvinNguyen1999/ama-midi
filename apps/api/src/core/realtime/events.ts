@@ -19,8 +19,10 @@ export type WsServerEvent =
       actor?: string
     }
   | { type: 'song.deleted'; songId: string; actor?: string }
+  | { type: 'invited'; songId: string; title: string; by: string }
   | { type: 'presence'; songId: string; users: PresenceUser[] }
 
 export type WsClientMessage =
   | { type: 'join'; songId: string; user?: PresenceUser }
   | { type: 'leave'; songId: string }
+  | { type: 'subscribe'; userId: string }

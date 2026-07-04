@@ -48,7 +48,10 @@ export const SongRepo = {
   },
 
   findAccess(id: string) {
-    return prisma.song.findUnique({ where: { id }, select: { ownerId: true, shareMode: true } })
+    return prisma.song.findUnique({
+      where: { id },
+      select: { ownerId: true, shareMode: true, title: true },
+    })
   },
 
   setShareMode(id: string, shareMode: string) {

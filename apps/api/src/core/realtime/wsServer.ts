@@ -13,6 +13,7 @@ const presenceUserSchema = z.object({ id: z.string(), email: z.string() })
 const clientMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('join'), songId: z.uuid(), user: presenceUserSchema.optional() }),
   z.object({ type: z.literal('leave'), songId: z.uuid() }),
+  z.object({ type: z.literal('subscribe'), userId: z.string().min(1) }),
 ])
 
 const ANON: z.infer<typeof presenceUserSchema> = { id: 'anonymous', email: 'anonymous' }
@@ -37,8 +38,10 @@ export function createWsServer(server: Server) {
 
       if (msg.type === 'join') {
         hub.join(ws, msg.songId, msg.user ?? ANON)
-      } else {
+      } else if (msg.type === 'leave') {
         hub.leave(ws, msg.songId)
+      } else {
+        hub.subscribeUser(ws, msg.userId)
       }
     })
 

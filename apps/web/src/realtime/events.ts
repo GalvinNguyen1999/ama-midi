@@ -1,0 +1,18 @@
+import type { Note, PresenceUser } from '~/types/midi'
+
+export type ServerEvent =
+  | { type: 'note.created'; songId: string; note: Note; actor?: string }
+  | { type: 'note.updated'; songId: string; note: Note; actor?: string }
+  | { type: 'note.deleted'; songId: string; noteId: string; actor?: string }
+  | {
+      type: 'song.updated'
+      songId: string
+      title: string
+      shareMode: 'edit' | 'view'
+      version: number
+      change: 'title' | 'share'
+      actor?: string
+    }
+  | { type: 'song.deleted'; songId: string; actor?: string }
+  | { type: 'invited'; songId: string; title: string; by: string }
+  | { type: 'presence'; songId: string; users: PresenceUser[] }
