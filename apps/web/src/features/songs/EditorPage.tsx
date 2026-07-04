@@ -379,7 +379,7 @@ export function EditorPage() {
               <Chip
                 size="small"
                 variant="outlined"
-                label={`v${current.version} · ${current.notes.length.toLocaleString()}/${current.noteCount.toLocaleString()} loaded`}
+                label={`${current.noteCount.toLocaleString()} note${current.noteCount === 1 ? '' : 's'}`}
               />
             ) : null}
             {current?.ownerEmail ? (
@@ -515,7 +515,9 @@ export function EditorPage() {
             <Menu anchorEl={perfAnchor} open={Boolean(perfAnchor)} onClose={() => setPerfAnchor(null)}>
               <MenuItem disabled sx={{ opacity: '1 !important' }}>
                 <Typography variant="caption" color="text.secondary">
-                  Developer · seed stress notes
+                  Developer · v{current?.version ?? 0} ·{' '}
+                  {(current?.notes.length ?? 0).toLocaleString()}/
+                  {(current?.noteCount ?? 0).toLocaleString()} loaded
                 </Typography>
               </MenuItem>
               <MenuItem onClick={() => handleSeed(1000)}>+ 1,000 notes</MenuItem>
