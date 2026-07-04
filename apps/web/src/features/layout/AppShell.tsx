@@ -19,6 +19,7 @@ import { useMemo, useState } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 
 import { handleLogoutApi } from '~/apis'
+import { NotificationBell } from '~/features/notifications/NotificationBell'
 import { useUserNotifications } from '~/features/notifications/useUserNotifications'
 import { readUser } from '~/utils/session'
 
@@ -55,6 +56,7 @@ export function AppShell() {
             </Typography>
           </Stack>
           <Box sx={{ flexGrow: 1 }} />
+          <NotificationBell />
           <Tooltip title={email || 'Account'}>
             <IconButton onClick={(e) => setAnchor(e.currentTarget)} size="small">
               <Avatar sx={{ width: 34, height: 34, bgcolor: 'primary.main', fontSize: 15 }}>

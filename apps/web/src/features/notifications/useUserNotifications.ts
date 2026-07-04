@@ -4,6 +4,7 @@ import { toast } from 'react-toastify'
 
 import type { ServerEvent } from '~/realtime/events'
 import { useAppDispatch } from '~/store/hooks'
+import { addNotification } from '~/store/notificationsSlice'
 import { fetchSongs } from '~/store/songSlice'
 import { WS_URL } from '~/utils/env'
 
@@ -27,6 +28,7 @@ export function useUserNotifications(userId: string | undefined) {
 
       if (event.type === 'invited') {
         const by = event.by ? event.by.split('@')[0] : 'Someone'
+        dispatch(addNotification({ songId: event.songId, title: event.title, by: event.by }))
         toast.info(`${by} invited you to “${event.title}”`, {
           onClick: () => navigate(`/songs/${event.songId}`),
         })
