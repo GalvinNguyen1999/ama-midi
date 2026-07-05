@@ -154,8 +154,8 @@ export function EditorPage() {
         {current ? <OnboardingCallout /> : null}
 
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Click the grid to add a note, drag to move it, click a note to edit it in the panel. Time
-          flows top → bottom (0–300s), tracks left → right.
+          Click to add · drag a note (or box-select several) to move · click a note to edit it in the
+          panel · right-click for more. Time flows top → bottom (0–300s), tracks left → right.
         </Typography>
 
         {loading && !current ? (

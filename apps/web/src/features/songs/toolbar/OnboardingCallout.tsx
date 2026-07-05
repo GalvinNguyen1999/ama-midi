@@ -42,9 +42,17 @@ export function OnboardingCallout() {
             Time runs <strong>top → bottom</strong> (0–300s); the 8 <strong>tracks</strong> run left →
             right.
           </li>
-          <li>Click an empty spot to add a note, drag a note to move it, click a note to edit.</li>
           <li>
-            Hit <strong>Play</strong> to hear it — and <strong>⌘Z / ⇧⌘Z</strong> to undo or redo.
+            <strong>Click</strong> an empty cell to add a note; <strong>drag</strong> a note (or a box
+            around several) to move; <strong>click</strong> a note to edit it in the side panel.
+          </li>
+          <li>
+            <strong>Right-click</strong> a note for quick actions · <strong>⌘D</strong> duplicate ·
+            <strong> Delete</strong> to remove · <strong>arrow keys</strong> to nudge.
+          </li>
+          <li>
+            Hit <strong>Play</strong> to hear it (click the <strong>ruler</strong> to jump) —
+            <strong> ⌘Z / ⇧⌘Z</strong> to undo or redo.
           </li>
         </Box>
       </Alert>
